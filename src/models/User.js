@@ -3,53 +3,59 @@ const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    name: { // 이름
       type: String,
       required: [true, '이름을 입력해주세요'],
       trim: true,
-      maxlength: [50, '이름은 50자 이내로 입력해주세요']
+      maxlength: [10, '이름은 10자 이내로 입력해주세요']
     },
-    email: {
+    email: {  // 이메일
       type: String,
       required: [true, '이메일을 입력해주세요'],
       unique: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, '유효한 이메일 주소를 입력해주세요']
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        '유효한 이메일 주소를 입력해주세요'
+      ]
     },
-    password: {
+    password: { // 비밀번호
       type: String,
+      required: function () {
+        return this.socialType === 'email';
+      },
       minlength: [8, '비밀번호는 8자 이상이어야 합니다'],
       select: false // API 응답에서 제외
     },
-    profileImage: {
+    profileImage: { // 프로필 이미지
       type: String,
       default: null
     },
-    intro: {
+    intro: {  // 자기소개
       type: String,
       maxlength: [200, '자기소개는 200자 이내로 입력해주세요'],
       default: null
     },
-    socialType: {
+    socialType: { // 소셜 로그인 타입
       type: String,
       enum: ['email', 'kakao', 'naver', 'google', 'apple'],
       default: 'email'
     },
-    socialId: {
+    socialId: { // 소셜 로그인 ID
       type: String,
       default: null
     },
-    refreshToken: {
+    refreshToken: { // 리프레시 토큰
       type: String,
       default: null
     },
-    pushNotificationEnabled: {
+    pushNotificationEnabled: {  // 푸시 알림 설정
       type: Boolean,
       default: true
     }
   },
   {
-    timestamps: true
+    timestamps: true  // createdAt, updatedAt 필드 추가
   }
 );
 

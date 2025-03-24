@@ -121,7 +121,8 @@ passport.use(
       clientID: process.env.APPLE_CLIENT_ID,
       teamID: process.env.APPLE_TEAM_ID,
       keyID: process.env.APPLE_KEY_ID,
-      privateKeyLocation: process.env.APPLE_PRIVATE_KEY_LOCATION,
+      // privateKeyLocation: process.env.APPLE_PRIVATE_KEY_LOCATION,
+      privateKeyString: process.env.APPLE_PRIVATE_KEY_STRING,
       callbackURL: process.env.APPLE_CALLBACK_URL
     },
     async (req, accessToken, refreshToken, idToken, profile, done) => {

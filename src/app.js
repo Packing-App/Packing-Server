@@ -1,3 +1,4 @@
+// src/app.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -14,8 +15,8 @@ const authRoutes = require('./routes/auth');
 // const packingItemRoutes = require('./routes/packingItems');
 // const notificationRoutes = require('./routes/notifications');
 
-// Passport 설정 - 주석 처리 (아직 구현되지 않음)
-// require('./config/passport');
+// Passport 설정
+require('./config/passport');
 
 const app = express();
 

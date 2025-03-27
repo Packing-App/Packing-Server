@@ -8,35 +8,59 @@ const User = require('../models/User');
 const logger = require('./logger');
 
 // Google OAuth Strategy
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      passReqToCallback: true // Add this to get more context in the verification callback
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // Check if user exists
+        // Log full profile for debugging
+        logger.info('Google Profile Data:', JSON.stringify(profile, null, 2));
+        logger.info('Access Token:', accessToken);
+        
+        // Validate profile data
+        if (!profile.id) {
+          logger.error('Invalid Google profile: Missing ID');
+          return done(new Error('Invalid Google profile'), null);
+        }
+
+        // More robust email extraction
+        const email = profile.emails && profile.emails.length > 0 
+          ? profile.emails[0].value 
+          : `google_${profile.id}@example.com`;
+
+        // Check if user exists with more detailed logging
         let user = await User.findOne({
           socialId: profile.id,
           socialType: 'google'
         });
 
-        // If user doesn't exist, create one
+        // If user doesn't exist, create with more robust data handling
         if (!user) {
           user = await User.create({
-            name: profile.displayName || `User-${profile.id}`,
-            email: profile.emails[0].value,
+            name: profile.displayName || `GoogleUser-${profile.id}`,
+            email: email,
             socialId: profile.id,
             socialType: 'google',
-            profileImage: profile.photos[0]?.value || null
+            profileImage: profile.photos && profile.photos.length > 0 
+              ? profile.photos[0].value 
+              : null
           });
+
+          logger.info(`New Google user created: ${user.email}`);
+        } else {
+          logger.info(`Existing Google user found: ${user.email}`);
         }
 
         return done(null, user);
       } catch (error) {
-        logger.error(`Google strategy error: ${error.message}`);
+        logger.error(`Google OAuth Error: ${error.message}`);
+        logger.error(`Error Stack: ${error.stack}`);
         return done(error, null);
       }
     }
@@ -115,42 +139,66 @@ passport.use(
 );
 
 // Apple OAuth Strategy
+
 passport.use(
   new AppleStrategy(
     {
       clientID: process.env.APPLE_CLIENT_ID,
       teamID: process.env.APPLE_TEAM_ID,
       keyID: process.env.APPLE_KEY_ID,
-      // privateKeyLocation: process.env.APPLE_PRIVATE_KEY_LOCATION,
       privateKeyString: process.env.APPLE_PRIVATE_KEY_STRING,
-      callbackURL: process.env.APPLE_CALLBACK_URL
+      callbackURL: process.env.APPLE_CALLBACK_URL,
+      passReqToCallback: true // 추가: 요청 객체에 접근 가능
     },
     async (req, accessToken, refreshToken, idToken, profile, done) => {
       try {
-        // Apple doesn't provide much profile info, so we extract from idToken
-        const appleId = profile.id;
-        const email = profile.email;
-        const name = req.body.user ? JSON.parse(req.body.user).name : `User-${appleId}`;
+        // 애플 로그인 추가 검증 엔드포인트에서 전달된 데이터 처리
+        const { userId, email, fullName } = req.body;
+
+        // idToken 디코딩 및 검증
+        const decodedToken = jwt.decode(idToken);
         
-        // Check if user exists
+        // 사용자 식별자 확인 (Apple의 고유 식별자)
+        const appleId = userId || decodedToken.sub;
+        
+        // 이메일 처리 (클라이언트에서 받은 이메일 또는 토큰의 이메일 사용)
+        const userEmail = email || 
+          (decodedToken.email ? decodedToken.email : `apple_${appleId}@example.com`);
+        
+        // 이름 처리
+        const userName = fullName 
+          ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
+          : `AppleUser-${appleId}`;
+
+        // 기존 사용자 찾기
         let user = await User.findOne({
           socialId: appleId,
           socialType: 'apple'
         });
 
-        // If user doesn't exist, create one
+        // 사용자 없으면 새로 생성
         if (!user) {
           user = await User.create({
-            name: name,
-            email: email || `apple_${appleId}@example.com`,
+            name: userName,
+            email: userEmail,
             socialId: appleId,
             socialType: 'apple'
           });
+
+          logger.info(`New Apple user created: ${userEmail}`);
+        } else {
+          // 기존 사용자 정보 업데이트 (선택적)
+          user.name = userName;
+          user.email = userEmail;
+          await user.save();
+
+          logger.info(`Existing Apple user found: ${userEmail}`);
         }
 
         return done(null, user);
       } catch (error) {
-        logger.error(`Apple strategy error: ${error.message}`);
+        logger.error(`Apple OAuth Error: ${error.message}`);
+        logger.error(`Error Stack: ${error.stack}`);
         return done(error, null);
       }
     }

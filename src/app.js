@@ -6,6 +6,8 @@ const morgan = require('morgan');
 const passport = require('passport');
 // const { errorHandler } = require('./middlewares/errorMiddleware');
 const logger = require('./config/logger');
+// src/app.js에 추가
+const session = require('express-session');
 
 // 라우트 임포트 - 주석 처리 (아직 구현되지 않은 라우트)
 const authRoutes = require('./routes/auth');
@@ -27,6 +29,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 app.use(passport.initialize());
+
+// 미들웨어 부분에 추가
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'packingapp-secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+
 
 // 기본 라우트 추가 (서버 실행 테스트용)
 app.get('/', (req, res) => {

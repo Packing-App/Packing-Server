@@ -14,12 +14,42 @@ router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
 
 // Social auth routes
-// Google OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+
+// src/routes/auth.js 수정
+// Google OAuth 부분 수정
+router.get('/google', (req, res, next) => {
+  // device 파라미터 캡처
+  if (req.query.device) {
+    req.session = req.session || {};
+    req.session.deviceId = req.query.device;
+    logger.info(`Device ID captured: ${req.query.device}`);
+  }
+  
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    state: req.query.device // 디바이스 ID를 state 파라미터로 전달
+  })(req, res, next);
+});
+
+// 콜백 URL 처리 수정
 router.get('/google/callback', 
+  (req, res, next) => {
+    // state 파라미터에서 디바이스 ID 복원
+    if (req.query.state) {
+      req.session = req.session || {};
+      req.session.deviceId = req.query.state;
+      logger.info(`Device ID restored from state: ${req.query.state}`);
+    }
+    next();
+  },
   passport.authenticate('google', { session: false }), 
   socialAuthController.socialLoginSuccess
 );
+
+
+
+
 
 // Kakao OAuth
 router.get('/kakao', passport.authenticate('kakao'));

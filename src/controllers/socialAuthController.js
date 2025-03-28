@@ -2,7 +2,7 @@
 const User = require('../models/User');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const logger = require('../config/logger');
-
+// src/controllers/socialAuthController.js 수정
 const socialLoginSuccess = async (req, res) => {
   try {
     if (!req.user) {
@@ -32,10 +32,15 @@ const socialLoginSuccess = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    // 디바이스 ID 로깅
+    const deviceId = req.session && req.session.deviceId;
+    logger.info(`Using device ID for redirect: ${deviceId || 'Not provided'}`);
+
     // iOS 앱으로 리디렉션 (딥링크 사용)
     const redirectUrl = `packingapp://auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}&userId=${user._id}`;
     
     logger.info(`Social login successful for user: ${user.email}`);
+    logger.info(`Redirecting to: ${redirectUrl}`);
     res.redirect(redirectUrl);
   } catch (error) {
     logger.error(`Social login success handler error: ${error.message}`);

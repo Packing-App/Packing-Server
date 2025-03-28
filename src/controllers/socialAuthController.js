@@ -81,9 +81,10 @@ const appleVerify = async (req, res) => {
     if (!user) {
       // 이름이 없는 경우 기본값으로 대체
       const userName = fullName && (fullName.givenName || fullName.familyName)
-        ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
-        : `AppleUser-${userId.substring(0, 8)}`;  // ID의 일부만 사용하여 간결하게
+      ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim().substring(0, 10) 
+      : `Apple-${userId.substring(0, 4)}`;
       
+        
       // 이메일도 검증
       const userEmail = email && email.length > 0 
         ? email 

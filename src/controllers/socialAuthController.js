@@ -71,7 +71,7 @@ const appleVerify = async (req, res) => {
       Name: ${fullName ? `${fullName.givenName} ${fullName.familyName}` : ''}`
     );
 
-    // 사용자 찾기 또는 생성
+    // 사용자 찾기
     let user = await User.findOne({
       socialId: userId,
       socialType: 'apple'
@@ -79,36 +79,42 @@ const appleVerify = async (req, res) => {
 
     // 사용자가 없으면 새로 생성
     if (!user) {
-      const userName = fullName 
+      // 이름이 없는 경우 기본값으로 대체
+      const userName = fullName && (fullName.givenName || fullName.familyName)
         ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
-        : `AppleUser-${userId}`;
-        
+        : `AppleUser-${userId.substring(0, 8)}`;  // ID의 일부만 사용하여 간결하게
+      
+      // 이메일도 검증
+      const userEmail = email && email.length > 0 
+        ? email 
+        : `apple_${userId}@example.com`;
+      
+      // 새 사용자 생성
       user = await User.create({
-        name: userName,
-        email: email || `apple_${userId}@example.com`,
+        name: userName,  // 반드시 값이 있도록 보장
+        email: userEmail,
         socialId: userId,
         socialType: 'apple'
       });
 
-      logger.info(`New Apple user created with ID: ${user._id}`);
+      logger.info(`New Apple user created with ID: ${user._id}, name: ${userName}`);
     } else {
-      // 기존 사용자의 경우, refreshToken만 업데이트하고 다른 필드는 건드리지 않음
       logger.info(`Existing Apple user found with ID: ${user._id}`);
       
-      // 리프레시 토큰 저장 (다른 필드는 변경하지 않음)
-      user.refreshToken = generateRefreshToken(user._id);
-      await User.findByIdAndUpdate(user._id, { refreshToken: user.refreshToken });
+      // 리프레시 토큰 업데이트 (findByIdAndUpdate로 유효성 검사 우회)
+      const refreshToken = generateRefreshToken(user._id);
+      await User.findByIdAndUpdate(user._id, { refreshToken });
+      user.refreshToken = refreshToken;  // 응답을 위해 메모리 내 객체도 업데이트
     }
 
     // 토큰 생성
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = user.refreshToken;
 
-    // 다른 소셜 로그인과 동일한 응답 형식 유지
+    // 응답
     res.status(200).json({
       success: true,
       accessToken,
-      refreshToken,
+      refreshToken: user.refreshToken,
       userId: user._id
     });
   } catch (error) {

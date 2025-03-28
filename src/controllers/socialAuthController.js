@@ -52,7 +52,6 @@ const socialLoginSuccess = async (req, res) => {
   }
 };
 
-
 const appleVerify = async (req, res) => {
   try {
     const { userId, email, fullName } = req.body;
@@ -69,7 +68,7 @@ const appleVerify = async (req, res) => {
     logger.info(`Apple Login Verification: 
       User ID: ${userId}, 
       Email: ${email || 'N/A'}, 
-      Name: ${fullName ? `${fullName.givenName} ${fullName.familyName}` : 'N/A'}`
+      Name: ${fullName ? `${fullName.givenName} ${fullName.familyName}` : ''}`
     );
 
     // 사용자 찾기 또는 생성
@@ -93,16 +92,17 @@ const appleVerify = async (req, res) => {
 
       logger.info(`New Apple user created with ID: ${user._id}`);
     } else {
+      // 기존 사용자의 경우, refreshToken만 업데이트하고 다른 필드는 건드리지 않음
       logger.info(`Existing Apple user found with ID: ${user._id}`);
+      
+      // 리프레시 토큰 저장 (다른 필드는 변경하지 않음)
+      user.refreshToken = generateRefreshToken(user._id);
+      await User.findByIdAndUpdate(user._id, { refreshToken: user.refreshToken });
     }
 
     // 토큰 생성
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-
-    // 리프레시 토큰 저장
-    user.refreshToken = refreshToken;
-    await user.save();
+    const refreshToken = user.refreshToken;
 
     // 다른 소셜 로그인과 동일한 응답 형식 유지
     res.status(200).json({

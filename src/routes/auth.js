@@ -4,7 +4,7 @@ const passport = require('passport');
 const socialAuthController = require('../controllers/socialAuthController');
 const authController = require('../controllers/authController');
 const { protect } = require('../middlewares/auth');
-
+const logger = require('../utils/logger');
 const router = express.Router();
 
 // Basic auth routes

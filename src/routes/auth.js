@@ -14,10 +14,6 @@ router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
 
 // Social auth routes
-
-
-// src/routes/auth.js 수정
-// Google OAuth 부분 수정
 router.get('/google', (req, res, next) => {
   // device 파라미터 캡처
   if (req.query.device) {
@@ -48,9 +44,6 @@ router.get('/google/callback',
 );
 
 
-
-
-
 // Kakao OAuth
 router.get('/kakao', passport.authenticate('kakao'));
 router.get('/kakao/callback', 
@@ -66,47 +59,14 @@ router.get('/naver/callback',
 );
 
 // Apple OAuth
-router.get('/apple', passport.authenticate('apple'));
-router.post('/apple/callback', 
-  passport.authenticate('apple', { session: false }), 
-  socialAuthController.socialLoginSuccess
-);
+// router.get('/apple', passport.authenticate('apple'));
+// router.post('/apple/callback', 
+//   passport.authenticate('apple', { session: false }), 
+//   socialAuthController.socialLoginSuccess
+// );
+// 현재 구현 방식에서는 iOS 앱이 Apple과의 인증을 처리하고, 서버는 그 결과만 받아 사용자 생성 및 인증 토큰 발급을 담당
+router.post('/apple/verify', socialAuthController.appleVerify);
 
-router.post('/apple/verify', async (req, res) => {
-  try {
-    const { userId, email, fullName } = req.body;
-
-    // 필수 데이터 검증
-    if (!userId) {
-      return res.status(400).json({
-        success: false, 
-        message: 'Apple User ID is required'
-      });
-    }
-
-    // 데이터 로깅 (보안에 주의)
-    logger.info(`Apple Login Verification: 
-      User ID: ${userId}, 
-      Email: ${email || 'N/A'}, 
-      Name: ${fullName ? `${fullName.givenName} ${fullName.familyName}` : 'N/A'}`
-    );
-
-    // 이 시점에서 추가 검증이나 처리 가능
-    res.status(200).json({
-      success: true,
-      message: '사전 검증 완료'
-    });
-  } catch (error) {
-    logger.error(`Apple Login Verification Error: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: '로그인 검증 중 오류 발생'
-    });
-  }
-});
-
-// Failure route for social login
-router.get('/social-failure', socialAuthController.socialLoginFailure);
 
 module.exports = router;
 

@@ -2,7 +2,7 @@
 const User = require('../models/User');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const logger = require('../config/logger');
-// src/controllers/socialAuthController.js 수정
+
 const socialLoginSuccess = async (req, res) => {
   try {
     if (!req.user) {
@@ -52,15 +52,75 @@ const socialLoginSuccess = async (req, res) => {
   }
 };
 
-const socialLoginFailure = (req, res) => {
-  logger.warn('Social login attempt failed');
-  res.status(401).json({
-    success: false,
-    message: '소셜 로그인에 실패했습니다'
-  });
+
+const appleVerify = async (req, res) => {
+  try {
+    const { userId, email, fullName } = req.body;
+
+    // 필수 데이터 검증
+    if (!userId) {
+      return res.status(400).json({
+        success: false, 
+        message: 'Apple User ID is required'
+      });
+    }
+
+    // 데이터 로깅
+    logger.info(`Apple Login Verification: 
+      User ID: ${userId}, 
+      Email: ${email || 'N/A'}, 
+      Name: ${fullName ? `${fullName.givenName} ${fullName.familyName}` : 'N/A'}`
+    );
+
+    // 사용자 찾기 또는 생성
+    let user = await User.findOne({
+      socialId: userId,
+      socialType: 'apple'
+    });
+
+    // 사용자가 없으면 새로 생성
+    if (!user) {
+      const userName = fullName 
+        ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
+        : `AppleUser-${userId}`;
+        
+      user = await User.create({
+        name: userName,
+        email: email || `apple_${userId}@example.com`,
+        socialId: userId,
+        socialType: 'apple'
+      });
+
+      logger.info(`New Apple user created with ID: ${user._id}`);
+    } else {
+      logger.info(`Existing Apple user found with ID: ${user._id}`);
+    }
+
+    // 토큰 생성
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    // 리프레시 토큰 저장
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // 다른 소셜 로그인과 동일한 응답 형식 유지
+    res.status(200).json({
+      success: true,
+      accessToken,
+      refreshToken,
+      userId: user._id
+    });
+  } catch (error) {
+    logger.error(`Apple Login Verification Error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: '로그인 검증 중 오류 발생'
+    });
+  }
 };
 
 module.exports = {
   socialLoginSuccess,
-  socialLoginFailure
+  appleVerify
 };

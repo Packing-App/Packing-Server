@@ -140,69 +140,69 @@ passport.use(
 
 // Apple OAuth Strategy
 
-passport.use(
-  new AppleStrategy(
-    {
-      clientID: process.env.APPLE_CLIENT_ID,
-      teamID: process.env.APPLE_TEAM_ID,
-      keyID: process.env.APPLE_KEY_ID,
-      privateKeyString: process.env.APPLE_PRIVATE_KEY_STRING,
-      callbackURL: process.env.APPLE_CALLBACK_URL,
-      passReqToCallback: true // 추가: 요청 객체에 접근 가능
-    },
-    async (req, accessToken, refreshToken, idToken, profile, done) => {
-      try {
-        // 애플 로그인 추가 검증 엔드포인트에서 전달된 데이터 처리
-        const { userId, email, fullName } = req.body;
+// passport.use(
+//   new AppleStrategy(
+//     {
+//       clientID: process.env.APPLE_CLIENT_ID,
+//       teamID: process.env.APPLE_TEAM_ID,
+//       keyID: process.env.APPLE_KEY_ID,
+//       privateKeyString: process.env.APPLE_PRIVATE_KEY_STRING,
+//       callbackURL: process.env.APPLE_CALLBACK_URL,
+//       passReqToCallback: true // 추가: 요청 객체에 접근 가능
+//     },
+//     async (req, accessToken, refreshToken, idToken, profile, done) => {
+//       try {
+//         // 애플 로그인 추가 검증 엔드포인트에서 전달된 데이터 처리
+//         const { userId, email, fullName } = req.body;
 
-        // idToken 디코딩 및 검증
-        const decodedToken = jwt.decode(idToken);
+//         // idToken 디코딩 및 검증
+//         const decodedToken = jwt.decode(idToken);
         
-        // 사용자 식별자 확인 (Apple의 고유 식별자)
-        const appleId = userId || decodedToken.sub;
+//         // 사용자 식별자 확인 (Apple의 고유 식별자)
+//         const appleId = userId || decodedToken.sub;
         
-        // 이메일 처리 (클라이언트에서 받은 이메일 또는 토큰의 이메일 사용)
-        const userEmail = email || 
-          (decodedToken.email ? decodedToken.email : `apple_${appleId}@example.com`);
+//         // 이메일 처리 (클라이언트에서 받은 이메일 또는 토큰의 이메일 사용)
+//         const userEmail = email || 
+//           (decodedToken.email ? decodedToken.email : `apple_${appleId}@example.com`);
         
-        // 이름 처리
-        const userName = fullName 
-          ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
-          : `AppleUser-${appleId}`;
+//         // 이름 처리
+//         const userName = fullName 
+//           ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() 
+//           : `AppleUser-${appleId}`;
 
-        // 기존 사용자 찾기
-        let user = await User.findOne({
-          socialId: appleId,
-          socialType: 'apple'
-        });
+//         // 기존 사용자 찾기
+//         let user = await User.findOne({
+//           socialId: appleId,
+//           socialType: 'apple'
+//         });
 
-        // 사용자 없으면 새로 생성
-        if (!user) {
-          user = await User.create({
-            name: userName,
-            email: userEmail,
-            socialId: appleId,
-            socialType: 'apple'
-          });
+//         // 사용자 없으면 새로 생성
+//         if (!user) {
+//           user = await User.create({
+//             name: userName,
+//             email: userEmail,
+//             socialId: appleId,
+//             socialType: 'apple'
+//           });
 
-          logger.info(`New Apple user created: ${userEmail}`);
-        } else {
-          // 기존 사용자 정보 업데이트 (선택적)
-          user.name = userName;
-          user.email = userEmail;
-          await user.save();
+//           logger.info(`New Apple user created: ${userEmail}`);
+//         } else {
+//           // 기존 사용자 정보 업데이트 (선택적)
+//           user.name = userName;
+//           user.email = userEmail;
+//           await user.save();
 
-          logger.info(`Existing Apple user found: ${userEmail}`);
-        }
+//           logger.info(`Existing Apple user found: ${userEmail}`);
+//         }
 
-        return done(null, user);
-      } catch (error) {
-        logger.error(`Apple OAuth Error: ${error.message}`);
-        logger.error(`Error Stack: ${error.stack}`);
-        return done(error, null);
-      }
-    }
-  )
-);
+//         return done(null, user);
+//       } catch (error) {
+//         logger.error(`Apple OAuth Error: ${error.message}`);
+//         logger.error(`Error Stack: ${error.stack}`);
+//         return done(error, null);
+//       }
+//     }
+//   )
+// );
 
 module.exports = passport;

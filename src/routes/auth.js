@@ -24,6 +24,16 @@ router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
 router.delete('/account', protect, authController.deleteAccount); // 계정 삭제 추가
 
+// 이메일 검증 관련 라우트
+router.get('/verify-email/:token', authController.verifyEmail);
+router.post('/resend-verification', authController.resendVerificationEmail);
+
+// 비밀번호 관련 라우트
+router.post('/forgot-password', authController.forgotPassword);
+router.get('/reset-password/:token', authController.validateResetToken);
+router.post('/reset-password/:token', authController.resetPassword);
+router.post('/change-password', protect, authController.changePassword);
+
 // 구글 로그인
 router.get('/google', captureDeviceId, (req, res, next) => {
   passport.authenticate('google', { 

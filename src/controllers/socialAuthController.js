@@ -130,7 +130,116 @@ const appleVerify = async (req, res) => {
   }
 };
 
+
+// Apple 계정 연결 해제
+const revokeAppleAccount = async (user) => {
+  try {
+    if (!user.socialId) {
+      logger.warn(`No socialId found for Apple user: ${user._id}`);
+      return;
+    }
+    
+    // Apple의 OAuth 토큰 설정
+    const client_id = process.env.APPLE_CLIENT_ID;
+    const client_secret = createAppleClientSecret(); // Apple 토큰 생성 함수
+    
+    // Apple 연결 해제 API 호출
+    // 참고: https://developer.apple.com/documentation/sign_in_with_apple/revoke_tokens
+    const response = await axios.post('https://appleid.apple.com/auth/revoke', {
+      client_id,
+      client_secret,
+      token: user.socialId,
+      token_type_hint: 'access_token'
+    });
+    
+    logger.info(`Apple account revoked for user: ${user._id}`);
+  } catch (error) {
+    logger.error(`Error revoking Apple account: ${error.message}`);
+    throw error;
+  }
+};
+
+// Google 계정 연결 해제
+const revokeGoogleAccount = async (user) => {
+  try {
+    if (!user.socialId) {
+      logger.warn(`No socialId found for Google user: ${user._id}`);
+      return;
+    }
+    
+    // Google의 토큰 취소 API 호출
+    // 참고: https://developers.google.com/identity/protocols/oauth2/web-server#tokenrevoke
+    const response = await axios.post(`https://accounts.google.com/o/oauth2/revoke?token=${user.socialId}`);
+    
+    logger.info(`Google account revoked for user: ${user._id}`);
+  } catch (error) {
+    logger.error(`Error revoking Google account: ${error.message}`);
+    throw error;
+  }
+};
+
+// Kakao 계정 연결 해제
+const revokeKakaoAccount = async (user) => {
+  try {
+    if (!user.socialId) {
+      logger.warn(`No socialId found for Kakao user: ${user._id}`);
+      return;
+    }
+    
+    // Kakao 연결 해제 API 호출
+    // 참고: https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api#unlink
+    const response = await axios.post('https://kapi.kakao.com/v1/user/unlink', null, {
+      headers: {
+        'Authorization': `Bearer ${process.env.KAKAO_ADMIN_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      params: {
+        target_id_type: 'user_id',
+        target_id: user.socialId
+      }
+    });
+    
+    logger.info(`Kakao account revoked for user: ${user._id}`);
+  } catch (error) {
+    logger.error(`Error revoking Kakao account: ${error.message}`);
+    throw error;
+  }
+};
+
+// Naver 계정 연결 해제
+const revokeNaverAccount = async (user) => {
+  try {
+    if (!user.socialId) {
+      logger.warn(`No socialId found for Naver user: ${user._id}`);
+      return;
+    }
+    
+    // Naver 연결 해제 API 호출
+    // 참고: https://developers.naver.com/docs/login/api/api.md#5-3-4-%EC%97%B0%EB%8F%99-%ED%95%B4%EC%A0%9C%ED%95%98%EA%B8%B0
+    const response = await axios.post('https://nid.naver.com/oauth2.0/token', null, {
+      params: {
+        client_id: process.env.NAVER_CLIENT_ID,
+        client_secret: process.env.NAVER_CLIENT_SECRET,
+        access_token: user.socialId,
+        grant_type: 'delete',
+        service_provider: 'NAVER'
+      }
+    });
+    
+    logger.info(`Naver account revoked for user: ${user._id}`);
+  } catch (error) {
+    logger.error(`Error revoking Naver account: ${error.message}`);
+    throw error;
+  }
+};
+
+const { createAppleClientSecret } = require('../utils/appleAuth');
+
 module.exports = {
   socialLoginSuccess,
-  appleVerify
+  appleVerify,
+  revokeAppleAccount,
+  revokeGoogleAccount,
+  revokeKakaoAccount,
+  revokeNaverAccount
 };

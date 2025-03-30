@@ -1,6 +1,7 @@
 // models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
@@ -53,7 +54,19 @@ const userSchema = new mongoose.Schema(
     pushNotificationEnabled: {  // 푸시 알림 설정
       type: Boolean,
       default: true
-    }
+    },
+    // 이메일 검증 관련 필드 추가
+    isEmailVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    emailVerificationToken: String,
+    emailVerificationExpire: Date,
+    
+    // 비밀번호 재설정 관련 필드 추가
+    resetPasswordToken: String,
+    resetPasswordExpire: Date
   },
   {
     timestamps: true  // createdAt, updatedAt 필드 추가
@@ -76,6 +89,41 @@ userSchema.pre('save', async function (next) {
 // 비밀번호 검증 메서드
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+
+// 이메일 검증 토큰 생성 메서드
+userSchema.methods.generateEmailVerificationToken = function() {
+  // 랜덤 토큰 생성
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+  
+  // 토큰 해시 저장
+  this.emailVerificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+  
+  // 만료 시간 설정 (24시간)
+  this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+  
+  return verificationToken;
+};
+
+// 비밀번호 재설정 토큰 생성 메서드
+userSchema.methods.generatePasswordResetToken = function() {
+  // 랜덤 토큰 생성
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  
+  // 토큰 해시 저장
+  this.resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+  
+  // 만료 시간 설정 (1시간)
+  this.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
+  
+  return resetToken;
 };
 
 const User = mongoose.model('User', userSchema);

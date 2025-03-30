@@ -34,7 +34,7 @@ const upload = multer({
   storage: multerS3({
     s3: s3,
     bucket: process.env.AWS_S3_BUCKET_NAME,
-    acl: 'public-read', // 업로드된 파일은 공개적으로 읽을 수 있음
+    // acl: 'public-read', // 업로드된 파일은 공개적으로 읽을 수 있음
     contentType: multerS3.AUTO_CONTENT_TYPE, // 파일 타입 자동 감지
     key: function (req, file, cb) {
       const userId = req.user._id;

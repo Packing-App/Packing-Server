@@ -11,7 +11,7 @@ const session = require('express-session');
 
 // 라우트 임포트 - 주석 처리 (아직 구현되지 않은 라우트)
 const authRoutes = require('./routes/auth');
-// const userRoutes = require('./routes/users');
+const userRoutes = require('./routes/users');
 // const friendshipRoutes = require('./routes/friendships');
 // const journeyRoutes = require('./routes/journeys');
 // const packingItemRoutes = require('./routes/packingItems');
@@ -46,7 +46,7 @@ app.get('/', (req, res) => {
 
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)
 app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes);
 // app.use('/api/friendships', friendshipRoutes);
 // app.use('/api/journeys', journeyRoutes);
 // app.use('/api/packing-items', packingItemRoutes);

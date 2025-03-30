@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, '이름을 입력해주세요'],
       trim: true,
-      maxlength: [10, '이름은 10자 이내로 입력해주세요']
+      maxlength: [20, '이름은 20자 이내로 입력해주세요']
     },
     email: {  // 이메일
       type: String,
@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
       required: function () {
         return this.socialType === 'email';
       },
-      minlength: [8, '비밀번호는 8자 이상이어야 합니다'],
+      minlength: [7, '비밀번호는 7자 이상이어야 합니다'],
       select: false // API 응답에서 제외
     },
     profileImage: { // 프로필 이미지

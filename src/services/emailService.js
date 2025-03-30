@@ -48,7 +48,7 @@ const sendVerificationEmail = async (to, name, token) => {
   const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   
   // 검증 링크
-  const verificationLink = `${baseUrl}/verify-email?token=${token}`;
+  const verificationLink = `${baseUrl}/auth/verify-email?token=${token}`;
   
   // 텍스트 버전
   const text = `안녕하세요 ${name}님, 회원가입을 완료하려면 다음 링크를 클릭하세요: ${verificationLink}`;
@@ -62,8 +62,6 @@ const sendVerificationEmail = async (to, name, token) => {
       <div style="margin: 30px 0;">
         <a href="${verificationLink}" style="background-color: #4a6ee0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">이메일 인증하기</a>
       </div>
-      <p>위 버튼이 작동하지 않는 경우, 아래 링크를 복사하여 브라우저에 붙여넣어주세요:</p>
-      <p style="word-break: break-all;">${verificationLink}</p>
       <p>이 링크는 24시간 동안만 유효합니다.</p>
     </div>
   `;
@@ -99,8 +97,6 @@ const sendPasswordResetEmail = async (to, name, token) => {
       <div style="margin: 30px 0;">
         <a href="${resetLink}" style="background-color: #4a6ee0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">비밀번호 재설정</a>
       </div>
-      <p>위 버튼이 작동하지 않는 경우, 아래 링크를 복사하여 브라우저에 붙여넣어주세요:</p>
-      <p style="word-break: break-all;">${resetLink}</p>
       <p>이 링크는 1시간 동안만 유효합니다.</p>
       <p>만약 비밀번호 재설정을 요청하지 않으셨다면, 이 이메일을 무시하셔도 됩니다.</p>
     </div>

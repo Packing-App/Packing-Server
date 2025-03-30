@@ -33,8 +33,12 @@ const register = async (req, res) => {
 
 
     // 이메일 검증 토큰 생성
+// 이메일 검증 토큰 생성 시 로깅 추가
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
+    console.log('Generated token:', verificationToken);
+    console.log('Saved hashed token:', user.emailVerificationToken);
+
 
     // 이메일 검증 링크 전송
     await sendVerificationEmail(
@@ -74,13 +78,17 @@ const register = async (req, res) => {
 // 이메일 검증
 const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.params;
+    const { token } = req.query;
     
+    console.log('Received token:', token);
+
     // 토큰 해시
     const hashedToken = crypto
       .createHash('sha256')
       .update(token)
       .digest('hex');
+
+    console.log('Hashed token:', hashedToken);
     
     // 해당 토큰을 가진 사용자 찾기 (만료되지 않은 토큰)
     const user = await User.findOne({
@@ -88,6 +96,13 @@ const verifyEmail = async (req, res) => {
       emailVerificationExpire: { $gt: Date.now() }
     });
     
+
+    console.log('Found user:', user ? 'Yes' : 'No');
+    if (user) {
+      console.log('Expire time:', user.emailVerificationExpire);
+      console.log('Current time:', new Date());
+    }
+
     if (!user) {
       return sendError(res, 400, '유효하지 않거나 만료된 토큰입니다');
     }
@@ -188,7 +203,7 @@ const forgotPassword = async (req, res) => {
 // 비밀번호 재설정 토큰 검증
 const validateResetToken = async (req, res) => {
   try {
-    const { token } = req.params;
+    const { token } = req.query;
     
     // 토큰 해시
     const hashedToken = crypto
@@ -216,7 +231,7 @@ const validateResetToken = async (req, res) => {
 // 비밀번호 재설정
 const resetPassword = async (req, res) => {
   try {
-    const { token } = req.params;
+    const { token } = req.query;
     const { password } = req.body;
     
     // 비밀번호 유효성 검사

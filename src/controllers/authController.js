@@ -319,15 +319,7 @@ const revokeNaverAccount = async (user) => {
   }
 };
 
-// Apple Client Secret 생성 함수 (예시)
-// 실제 구현은 JWT 라이브러리를 사용하여 필요한 서명 생성
-const createAppleClientSecret = () => {
-  // JWT 생성 로직
-  // 필요한 경우 별도 함수로 구현
-  return 'generated_apple_client_secret';
-};
-
-// 기존 함수들은 유지...
+const { createAppleClientSecret } = require('../utils/appleAuth');
 
 module.exports = {
   register,

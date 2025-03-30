@@ -1,16 +1,14 @@
 // src/controllers/socialAuthController.js
 const User = require('../models/User');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 
 const socialLoginSuccess = async (req, res) => {
   try {
     if (!req.user) {
       logger.error('No user object found in social login');
-      return res.status(401).json({
-        success: false,
-        message: '인증에 실패했습니다'
-      });
+      return sendError(res, 401, '소셜 로그인 처리 중 오류가 발생했습니다');
     }
 
     const user = req.user;
@@ -18,10 +16,7 @@ const socialLoginSuccess = async (req, res) => {
     // Validate user object
     if (!user._id) {
       logger.error('Invalid user object: Missing _id');
-      return res.status(401).json({
-        success: false,
-        message: '유효하지 않은 사용자입니다'
-      });
+      return sendError(res, 401, '유효하지 않은 사용자입니다');
     }
 
     // 토큰 생성
@@ -41,14 +36,21 @@ const socialLoginSuccess = async (req, res) => {
     
     logger.info(`Social login successful for user: ${user.email}`);
     logger.info(`Redirecting to: ${redirectUrl}`);
+
+    // 리디렉션 응답
     res.redirect(redirectUrl);
+
   } catch (error) {
     logger.error(`Social login success handler error: ${error.message}`);
     logger.error(`Error Stack: ${error.stack}`);
-    res.status(500).json({
-      success: false,
-      message: '소셜 로그인 처리 중 오류가 발생했습니다'
-    });
+
+    const errorRedirectUrl = `packingapp://auth/error?message=${encodeURIComponent('소셜 로그인 처리 중 오류가 발생했습니다')}`;
+    res.redirect(errorRedirectUrl);
+
+    // res.status(500).json({
+    //   success: false,
+    //   message: '소셜 로그인 처리 중 오류가 발생했습니다'
+    // });
   }
 };
 
@@ -58,10 +60,7 @@ const appleVerify = async (req, res) => {
 
     // 필수 데이터 검증
     if (!userId) {
-      return res.status(400).json({
-        success: false, 
-        message: 'Apple User ID is required'
-      });
+      return sendError(res, 400, 'APPLE USER ID는 필수입니다');
     }
 
     // 데이터 로깅
@@ -111,19 +110,23 @@ const appleVerify = async (req, res) => {
     // 토큰 생성
     const accessToken = generateAccessToken(user._id);
 
-    // 응답
-    res.status(200).json({
-      success: true,
+    // 사용자 응답 데이터 구성
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      profileImage: user.profileImage,
+      socialType: user.socialType
+    };
+
+    return sendSuccess(res, 200, 'Apple 로그인이 성공적으로 완료되었습니다', {
       accessToken,
-      refreshToken: user.refreshToken,
-      userId: user._id
+      refreshToken,
+      user: userData
     });
   } catch (error) {
     logger.error(`Apple Login Verification Error: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: '로그인 검증 중 오류 발생'
-    });
+    return sendError(res, 500, '로그인 검증 중 오류 발생');
   }
 };
 

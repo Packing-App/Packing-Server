@@ -7,28 +7,32 @@ const { protect } = require('../middlewares/auth');
 const logger = require('../config/logger');
 const router = express.Router();
 
-// Basic auth routes
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/refresh-token', authController.refreshToken);
-router.post('/logout', protect, authController.logout);
-
-// Social auth routes
-router.get('/google', (req, res, next) => {
-  // device 파라미터 캡처
+// 디바이스 ID 캡처 헬퍼 함수
+const captureDeviceId = (req, res, next) => {
   if (req.query.device) {
     req.session = req.session || {};
     req.session.deviceId = req.query.device;
     logger.info(`Device ID captured: ${req.query.device}`);
   }
-  
+  next();
+};
+
+// Basic auth routes
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', protect, authController.logout);
+router.delete('/account', protect, authController.deleteAccount); // 계정 삭제 추가
+
+// 구글 로그인
+router.get('/google', captureDeviceId, (req, res, next) => {
   passport.authenticate('google', { 
     scope: ['profile', 'email'],
-    state: req.query.device // 디바이스 ID를 state 파라미터로 전달
+    state: req.session.deviceId // 디바이스 ID를 state 파라미터로 전달
   })(req, res, next);
 });
 
-// 콜백 URL 처리 수정
+// 구글 콜백 URL 처리
 router.get('/google/callback', 
   (req, res, next) => {
     // state 파라미터에서 디바이스 ID 복원
@@ -43,17 +47,46 @@ router.get('/google/callback',
   socialAuthController.socialLoginSuccess
 );
 
+// 카카오 로그인
+router.get('/kakao', captureDeviceId, (req, res, next) => {
+  passport.authenticate('kakao', {
+    state: req.session.deviceId // 디바이스 ID를 state 파라미터로 전달
+  })(req, res, next);
+});
 
-// Kakao OAuth
-router.get('/kakao', passport.authenticate('kakao'));
+// 카카오 콜백 URL 처리
 router.get('/kakao/callback', 
+  (req, res, next) => {
+    // state 파라미터에서 디바이스 ID 복원
+    if (req.query.state) {
+      req.session = req.session || {};
+      req.session.deviceId = req.query.state;
+      logger.info(`Device ID restored from state: ${req.query.state}`);
+    }
+    next();
+  },
   passport.authenticate('kakao', { session: false }), 
   socialAuthController.socialLoginSuccess
 );
 
-// Naver OAuth
-router.get('/naver', passport.authenticate('naver'));
+// 네이버 로그인
+router.get('/naver', captureDeviceId, (req, res, next) => {
+  passport.authenticate('naver', {
+    state: req.session.deviceId // 디바이스 ID를 state 파라미터로 전달
+  })(req, res, next);
+});
+
+// 네이버 콜백 URL 처리
 router.get('/naver/callback', 
+  (req, res, next) => {
+    // state 파라미터에서 디바이스 ID 복원
+    if (req.query.state) {
+      req.session = req.session || {};
+      req.session.deviceId = req.query.state;
+      logger.info(`Device ID restored from state: ${req.query.state}`);
+    }
+    next();
+  },
   passport.authenticate('naver', { session: false }), 
   socialAuthController.socialLoginSuccess
 );

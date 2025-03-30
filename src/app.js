@@ -41,7 +41,7 @@ app.use(session({
 
 // 기본 라우트 추가 (서버 실행 테스트용)
 app.get('/', (req, res) => {
-  res.json({ message: 'Packing 앱 API 서버가 실행 중입니다!' });
+  res.json({ message: 'PackingAPP Server is Running.' });
 });
 
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)

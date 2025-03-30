@@ -58,12 +58,6 @@ router.get('/naver/callback',
   socialAuthController.socialLoginSuccess
 );
 
-// Apple OAuth
-// router.get('/apple', passport.authenticate('apple'));
-// router.post('/apple/callback', 
-//   passport.authenticate('apple', { session: false }), 
-//   socialAuthController.socialLoginSuccess
-// );
 // 현재 구현 방식에서는 iOS 앱이 Apple과의 인증을 처리하고, 서버는 그 결과만 받아 사용자 생성 및 인증 토큰 발급을 담당
 router.post('/apple/verify', socialAuthController.appleVerify);
 

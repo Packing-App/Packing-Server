@@ -19,7 +19,7 @@ const server = app.listen(PORT, () => {
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     // Try alternative port
-    const altPort = 5001; // Fixed to be 5001, not 50001
+    const altPort = 5001;
     logger.error(`Port ${PORT} is busy, trying port ${altPort}...`);
     app.listen(altPort, () => {
       logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${altPort}`);

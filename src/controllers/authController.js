@@ -306,6 +306,11 @@ const changePassword = async (req, res) => {
     if (!isMatch) {
       return sendError(res, 401, '현재 비밀번호가 일치하지 않습니다');
     }
+
+    // 새 비밀번호가 현재 비밀번호와 같은 경우
+    if (currentPassword === newPassword) {
+      return sendError(res, 400, '새 비밀번호는 현재 비밀번호와 달라야 합니다');
+    }
     
     // 비밀번호 변경
     user.password = newPassword;
@@ -377,7 +382,7 @@ const login = async (req, res) => {
   }
 };
 
-// 토큰 갱신
+// 액세스 토큰 갱신
 const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;

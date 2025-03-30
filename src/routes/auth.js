@@ -22,7 +22,7 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
-router.delete('/account', protect, authController.deleteAccount); // 계정 삭제 추가
+router.delete('/delete-account', protect, authController.deleteAccount); // 계정 삭제 추가
 
 // 이메일 검증 관련 라우트
 router.get('/verify-email', authController.verifyEmail);

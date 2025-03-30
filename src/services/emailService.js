@@ -83,7 +83,7 @@ const sendPasswordResetEmail = async (to, name, token) => {
   const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   
   // 재설정 링크
-  const resetLink = `${baseUrl}/reset-password?token=${token}`;
+  const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
   
   // 텍스트 버전
   const text = `안녕하세요 ${name}님, 비밀번호를 재설정하려면 다음 링크를 클릭하세요: ${resetLink}`;

@@ -20,6 +20,15 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
+// S3 연결 테스트 (라우터 파일 내에 추가)
+s3.listBuckets((err, data) => {
+    if (err) {
+      console.error('S3 연결 테스트 오류:', err);
+    } else {
+      console.log('S3 연결 성공, 사용 가능한 버킷:', data.Buckets.map(b => b.Name));
+    }
+  });
+
 // 파일 업로드 미들웨어 설정
 const upload = multer({
   storage: multerS3({

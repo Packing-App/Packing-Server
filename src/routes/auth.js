@@ -22,15 +22,15 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
-router.delete('/delete-account', protect, authController.deleteAccount); // 계정 삭제 추가
+router.delete('/delete-account', protect, authController.deleteAccount);
 
-// 이메일 검증 관련 라우트
-router.get('/verify-email', authController.verifyEmail);
-router.post('/resend-verification', authController.resendVerificationEmail);
+// 이메일 인증 관련 라우트 (인증번호 방식으로 변경)
+router.post('/verify-email', authController.verifyEmailCode);
+router.post('/resend-verification', authController.resendVerificationCode);
 
-// 비밀번호 관련 라우트
+// 비밀번호 관련 라우트 (인증번호 방식으로 변경)
 router.post('/forgot-password', authController.forgotPassword);
-router.get('/reset-password', authController.validateResetToken);
+router.post('/verify-reset-code', authController.verifyResetCode);
 router.post('/reset-password', authController.resetPassword);
 router.post('/change-password', protect, authController.changePassword);
 

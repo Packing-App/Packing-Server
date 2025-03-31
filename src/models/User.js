@@ -55,18 +55,29 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
-    // 이메일 검증 관련 필드 추가
+    // 이메일 검증 관련 필드 수정
     isEmailVerified: {
       type: Boolean,
       default: false
     },
-
-    emailVerificationToken: String,
-    emailVerificationExpire: Date,
+    verificationCode: { // 이메일 인증번호
+      type: String,
+      default: null
+    },
+    verificationCodeExpire: { // 인증번호 만료시간
+      type: Date,
+      default: null
+    },
     
-    // 비밀번호 재설정 관련 필드 추가
-    resetPasswordToken: String,
-    resetPasswordExpire: Date
+    // 비밀번호 재설정 관련 필드 수정
+    resetPasswordCode: { // 비밀번호 재설정 인증번호
+      type: String,
+      default: null
+    },
+    resetPasswordCodeExpire: { // 인증번호 만료시간
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: true  // createdAt, updatedAt 필드 추가
@@ -91,39 +102,38 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-
-// 이메일 검증 토큰 생성 메서드
-userSchema.methods.generateEmailVerificationToken = function() {
-  // 랜덤 토큰 생성
-  const verificationToken = crypto.randomBytes(20).toString('hex');
+// 이메일 검증 인증번호 생성 메서드
+userSchema.methods.generateEmailVerificationCode = function() {
+  // 6자리 인증번호 생성
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // 토큰 해시 저장
-  this.emailVerificationToken = crypto
+  // 인증번호 저장 (해싱하여 저장)
+  this.verificationCode = crypto
     .createHash('sha256')
-    .update(verificationToken)
+    .update(verificationCode)
     .digest('hex');
   
-  // 만료 시간 설정 (24시간)
-  this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+  // 만료 시간 설정 (30분)
+  this.verificationCodeExpire = Date.now() + 30 * 60 * 1000;
   
-  return verificationToken;
+  return verificationCode;
 };
 
-// 비밀번호 재설정 토큰 생성 메서드
-userSchema.methods.generatePasswordResetToken = function() {
-  // 랜덤 토큰 생성
-  const resetToken = crypto.randomBytes(20).toString('hex');
+// 비밀번호 재설정 인증번호 생성 메서드
+userSchema.methods.generatePasswordResetCode = function() {
+  // 6자리 인증번호 생성
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // 토큰 해시 저장
-  this.resetPasswordToken = crypto
+  // 인증번호 저장 (해싱하여 저장)
+  this.resetPasswordCode = crypto
     .createHash('sha256')
-    .update(resetToken)
+    .update(resetCode)
     .digest('hex');
   
-  // 만료 시간 설정 (1시간)
-  this.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
+  // 만료 시간 설정 (30분)
+  this.resetPasswordCodeExpire = Date.now() + 30 * 60 * 1000;
   
-  return resetToken;
+  return resetCode;
 };
 
 const User = mongoose.model('User', userSchema);

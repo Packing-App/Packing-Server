@@ -101,14 +101,13 @@ const appleVerify = async (req, res) => {
     } else {
       logger.info(`Existing Apple user found with ID: ${user._id}`);
       
-      // 리프레시 토큰 업데이트 (findByIdAndUpdate로 유효성 검사 우회)
-      const refreshToken = generateRefreshToken(user._id);
-      await User.findByIdAndUpdate(user._id, { refreshToken });
-      user.refreshToken = refreshToken;  // 응답을 위해 메모리 내 객체도 업데이트
     }
 
     // 토큰 생성
     const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+    await User.findByIdAndUpdate(user._id, { refreshToken });
+    user.refreshToken = refreshToken;  // 응답을 위해 메모리 내 객체도 업데이트
 
     // 사용자 응답 데이터 구성
     const userData = {

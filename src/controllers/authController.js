@@ -374,7 +374,7 @@ const login = async (req, res) => {
 
     // 소셜 로그인 사용자가 이메일 로그인 시도하는 경우
     if (user.socialType !== 'email') {
-      return sendError(res, 401, '이 계정은 ${user.socialType} 소셜 로그인으로 가입되었습니다. 소셜 로그인으로 로그인 해주세요');
+      return sendError(res, 401, `이 계정은 ${user.socialType} 소셜 로그인으로 가입되었습니다. 소셜 로그인으로 로그인 해주세요`);
     }
 
     // 비밀번호 확인
@@ -454,7 +454,7 @@ const refreshToken = async (req, res) => {
 // 로그아웃
 const logout = async (req, res) => {
   try {
-    // 사용자에서 리프레시 토큰 제거
+    // 사용자에서 리프레시 토큰 제거B
     req.user.refreshToken = null;
     await req.user.save();
 

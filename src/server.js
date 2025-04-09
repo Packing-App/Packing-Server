@@ -4,6 +4,8 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const logger = require('./config/logger');
 const { seedThemeTemplates } = require('./config/seedData');
+const { setupSocketIO } = require('./socket/socketSetup');
+const { initSchedulers } = require('./utils/scheduler');
 
 // MongoDB 연결
 connectDB().then(() => {
@@ -27,4 +29,21 @@ const server = app.listen(PORT, () => {
   } else {
     logger.error(`Error starting server: ${err.message}`);
   }
+});
+
+// Socket.IO 설정
+const io = setupSocketIO(server);
+
+// 전역 변수로 io 객체 저장 (다른 모듈에서 접근 가능하도록)
+global.io = io;
+
+// 알림 스케줄러 초기화
+initSchedulers();
+
+// Graceful Shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received. Shutting down gracefully.');
+  server.close(() => {
+    logger.info('Process terminated.');
+  });
 });

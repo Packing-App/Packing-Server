@@ -4,7 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const passport = require('passport');
-// const { errorHandler } = require('./middlewares/errorMiddleware');
 const logger = require('./config/logger');
 // src/app.js에 추가
 const session = require('express-session');
@@ -12,10 +11,10 @@ const session = require('express-session');
 // 라우트 임포트 - 주석 처리 (아직 구현되지 않은 라우트)
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
-// const friendshipRoutes = require('./routes/friendships');
-// const journeyRoutes = require('./routes/journeys');
-// const packingItemRoutes = require('./routes/packingItems');
-// const notificationRoutes = require('./routes/notifications');
+const friendshipRoutes = require('./routes/friendships');
+const journeyRoutes = require('./routes/journeys');
+const packingItemRoutes = require('./routes/packingItems');
+const notificationRoutes = require('./routes/notifications');
 
 // Passport 설정
 require('./config/passport');
@@ -47,10 +46,10 @@ app.get('/', (req, res) => {
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-// app.use('/api/friendships', friendshipRoutes);
-// app.use('/api/journeys', journeyRoutes);
-// app.use('/api/packing-items', packingItemRoutes);
-// app.use('/api/notifications', notificationRoutes);
+app.use('/api/friendships', friendshipRoutes);
+app.use('/api/journeys', journeyRoutes);
+app.use('/api/packing-items', packingItemRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 에러 핸들링 미들웨어 - 임시 간단한 에러 핸들러 추가
 app.use((err, req, res, next) => {

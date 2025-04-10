@@ -391,27 +391,41 @@ const getRecommendations = async (req, res) => {
       return sendError(res, 403, '이 여행에 접근할 권한이 없습니다');
     }
 
-    // 테마별 준비물 템플릿 조회
-    const themeTemplate = await ThemeTemplate.findOne({ themeName: journey.theme });
+    // 준비물 추천 서비스 호출
+    const itemRecommendationService = require('../services/itemRecommendationService');
+    const recommendedItems = await itemRecommendationService.getRecommendedItems(journey);
 
-    // 테마 템플릿이 없는 경우 기본 필수품 목록 반환
-    if (!themeTemplate) {
-      // 기본 필수품 목록 (임시)
-      const basicItems = [
-        { name: '신분증', category: 'documents', isEssential: true },
-        { name: '여행 서류', category: 'documents', isEssential: true },
-        { name: '충전기', category: 'electronics', isEssential: true },
-        { name: '세면도구', category: 'toiletries', isEssential: true },
-        { name: '상비약', category: 'medicines', isEssential: true }
-      ];
-      
-      return sendSuccess(res, 200, '기본 추천 준비물 목록입니다', { items: basicItems });
-    }
+    // 결과 분류 (옷차림, 필수품 등으로 구분)
+    const categories = {
+      clothing: { name: '옷차림', items: [] },
+      electronics: { name: '전자기기', items: [] },
+      toiletries: { name: '세면용품', items: [] },
+      documents: { name: '서류', items: [] },
+      medicines: { name: '의약품', items: [] },
+      essentials: { name: '필수품', items: [] },
+      other: { name: '기타', items: [] }
+    };
 
-    // 여행 날짜에 따른 날씨 고려 (향후 날씨 API 연동)
-    // 이 부분은 추후 날씨 API를 연동하여 구현
+    // 카테고리별로 아이템 분류
+    recommendedItems.forEach(item => {
+      if (categories[item.category]) {
+        categories[item.category].items.push(item);
+      } else {
+        categories.other.items.push(item);
+      }
+    });
 
-    return sendSuccess(res, 200, '테마별 추천 준비물 목록입니다', { items: themeTemplate.items });
+    return sendSuccess(res, 200, '여행 정보에 맞는 추천 준비물 목록입니다', {
+      journey: {
+        title: journey.title,
+        destination: journey.destination,
+        startDate: journey.startDate,
+        endDate: journey.endDate,
+        theme: journey.theme,
+        transportType: journey.transportType
+      },
+      categories: categories
+    });
   } catch (error) {
     logger.error(`추천 준비물 조회 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');

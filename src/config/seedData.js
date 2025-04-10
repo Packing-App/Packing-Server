@@ -144,7 +144,7 @@ const themeTemplateData = [
       { name: '쇼핑몰 지도', category: 'documents', isEssential: false },
       { name: '작은 가방/파우치', category: 'essentials', isEssential: false },
       { name: '계산기/환율 앱', category: 'electronics', isEssential: false },
-      { name: '가벼운 재킷', category: 'clothing', isEssential: false },
+      { name: '얇은 재킷', category: 'clothing', isEssential: false },
       { name: '사이즈 측정 테이프', category: 'essentials', isEssential: false }
     ]
   },

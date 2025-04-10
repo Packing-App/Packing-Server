@@ -318,8 +318,10 @@ const togglePackingItem = async (req, res) => {
       return sendError(res, 403, '이 준비물의 상태를 변경할 권한이 없습니다');
     }
 
-    // 체크 상태 토글
-    packingItem.isChecked = !packingItem.isChecked;
+    // 체크 상태 토글 (체크 상태이면, 체크 해제하고, 체크 해제 상태이면 체크)
+    // packingItem.isChecked = !packingItem.isChecked;
+    packingItem.isChecked = packingItem.isChecked ? false : true;
+    
     await packingItem.save();
 
     // 상세 정보를 위한 populate

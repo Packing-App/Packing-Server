@@ -51,7 +51,7 @@ const getPackingItemsByJourney = async (req, res) => {
  */
 const createPackingItem = async (req, res) => {
   try {
-    const { journeyId, name, count, category, isShared, assignedTo } = req.body;
+    const { journeyId, name, count, category, isShared, assignedTo, mergeDuplicates = true } = req.body;
 
     if (!journeyId || !name || !category) {
       return sendError(res, 400, '모든 필수 정보를 입력해주세요');
@@ -72,6 +72,29 @@ const createPackingItem = async (req, res) => {
     // 할당 대상이 있는 경우 참가자 확인
     if (assignedTo && !journey.participants.includes(assignedTo)) {
       return sendError(res, 400, '할당 대상은 여행 참가자여야 합니다');
+    }
+
+    // 이름이 같은 아이템이 이미 있는지 확인 (생성자가 같고, 공유 상태가 같은 경우)
+    if (mergeDuplicates) {
+      const existingItem = await PackingItem.findOne({
+        journeyId,
+        name,
+        isShared: isShared || false,
+        createdBy: req.user._id,
+        // 할당된 사용자가 같거나 둘 다 없는 경우만 병합
+        ...(isShared ? { assignedTo: assignedTo || null } : {})
+      });
+
+      // 이미 있으면 count만 증가
+      if (existingItem) {
+        existingItem.count += (count || 1);
+        await existingItem.save();
+        
+        await existingItem.populate('assignedTo', 'name profileImage');
+        await existingItem.populate('createdBy', 'name profileImage');
+        
+        return sendSuccess(res, 200, '준비물 수량이 업데이트되었습니다', existingItem);
+      }
     }
 
     // 새 준비물 생성
@@ -104,7 +127,7 @@ const createPackingItem = async (req, res) => {
  */
 const createBulkPackingItems = async (req, res) => {
   try {
-    const { journeyId, templateName, selectedItems } = req.body;
+    const { journeyId, templateName, selectedItems, mergeDuplicates = true } = req.body;
 
     if (!journeyId || !templateName || !selectedItems || !selectedItems.length) {
       return sendError(res, 400, '모든 필수 정보를 입력해주세요');
@@ -134,21 +157,57 @@ const createBulkPackingItems = async (req, res) => {
       selectedItems.includes(item.name)
     );
 
-    // 일괄 생성할 준비물 목록
-    const packingItemsData = itemsToCreate.map(item => ({
-      journeyId,
-      name: item.name,
-      count: 1,
-      category: item.category,
-      isShared: false, // 개인 준비물로 기본 설정
-      createdBy: req.user._id,
-      isChecked: false
-    }));
+    const createdItems = [];
+    const updatedItems = [];
 
-    // 준비물 일괄 생성
-    const createdItems = await PackingItem.insertMany(packingItemsData);
+    // 각 아이템에 대해 중복 확인 후 생성 또는 업데이트
+    for (const item of itemsToCreate) {
+      // 이름이 같은 아이템이 이미 있는지 확인
+      if (mergeDuplicates) {
+        const existingItem = await PackingItem.findOne({
+          journeyId,
+          name: item.name,
+          isShared: false, // 개인 준비물로 기본 설정
+          createdBy: req.user._id
+        });
 
-    return sendSuccess(res, 201, '준비물이 성공적으로 일괄 생성되었습니다', createdItems);
+        // 이미 있으면 count만 증가
+        if (existingItem) {
+          existingItem.count += 1;
+          await existingItem.save();
+          updatedItems.push(existingItem);
+          continue;
+        }
+      }
+
+      // 새 준비물 생성
+      const newItem = await PackingItem.create({
+        journeyId,
+        name: item.name,
+        count: 1,
+        category: item.category,
+        isShared: false, // 개인 준비물로 기본 설정
+        createdBy: req.user._id,
+        isChecked: false
+      });
+
+      createdItems.push(newItem);
+    }
+
+    // 생성 및 업데이트된 모든 아이템 합치기
+    const allItems = [...createdItems, ...updatedItems];
+
+    // 결과 메시지 생성
+    let message = '';
+    if (createdItems.length > 0 && updatedItems.length > 0) {
+      message = `${createdItems.length}개의 준비물이 생성되고, ${updatedItems.length}개의 준비물이 업데이트되었습니다`;
+    } else if (createdItems.length > 0) {
+      message = `${createdItems.length}개의 준비물이 성공적으로 생성되었습니다`;
+    } else {
+      message = `${updatedItems.length}개의 준비물이 업데이트되었습니다`;
+    }
+
+    return sendSuccess(res, 201, message, allItems);
   } catch (error) {
     logger.error(`준비물 일괄 생성 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');

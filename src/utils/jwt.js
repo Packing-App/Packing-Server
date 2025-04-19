@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 // Access 토큰 생성
 const generateAccessToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m'
+    expiresIn: process.env.JWT_ACCESS_EXPIRY || '1h'
   });
 };
 

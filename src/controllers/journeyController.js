@@ -15,7 +15,7 @@ const getJourneys = async (req, res) => {
   try {
     // 사용자가 참여한 모든 여행 조회 (participants 배열에 사용자 ID가 포함된 여행)
     const journeys = await Journey.find({ participants: req.user._id })
-      .populate('participants', 'name profileImage')
+      .populate('participants', 'email name profileImage socialType')
       .sort({ startDate: 1 }); // 시작일 기준 오름차순 정렬
 
     return sendSuccess(res, 200, '여행 목록을 성공적으로 조회했습니다', journeys);

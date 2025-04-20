@@ -45,7 +45,9 @@ const journeySchema = new mongoose.Schema(
     theme: { // 여행 테마
       type: String,
       required: [true, '여행 테마를 선택해주세요'],
-      enum: ['beach', 'city', 'mountain', 'camping', 'waterSports', 'cycling', 'hiking', 'shopping', 'themepark', 'fishing', 'skiing', 'picnic', 'other']
+      enum: ['waterSports', 'cycling', 'camping', 'picnic',
+        'mountain', 'skiing', 'fishing', 'shopping', 'themepark','other'
+      ]
     },
     imageUrl: { // 대표 이미지 URL
       type: String,

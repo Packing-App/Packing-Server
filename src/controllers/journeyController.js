@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const ThemeTemplate = require('../models/ThemeTemplate');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
+const { getDestinationImage } = require('../utils/externalApiUtils');
 
 /**
  * 사용자의 여행 목록 조회
@@ -84,6 +85,7 @@ const createJourney = async (req, res) => {
     if (end < start) {
       return sendError(res, 400, '종료 날짜는 시작 날짜 이후여야 합니다');
     }
+    const imageData = await getDestinationImage(destination, theme);
 
     // 새 여행 생성
     const journey = await Journey.create({
@@ -96,7 +98,8 @@ const createJourney = async (req, res) => {
       theme,
       isPrivate,
       creatorId: req.user._id,
-      participants: [req.user._id] // 생성자를 참가자로 자동 추가
+      participants: [req.user._id], // 생성자를 참가자로 자동 추가
+      imageUrl: imageData ? imageData.imageUrl : null // 이미지 URL 저장
     });
 
     // 테마 기반 이미지 URL 설정 (향후 구현)

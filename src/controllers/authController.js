@@ -51,7 +51,7 @@ const register = async (req, res) => {
     await user.save();
     
     const userData = {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       profileImage: user.profileImage,
@@ -301,7 +301,7 @@ const resetPassword = async (req, res) => {
     
     // 사용자 응답 데이터
     const userData = {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       profileImage: user.profileImage,
@@ -393,7 +393,7 @@ const login = async (req, res) => {
     await user.save();
 
     const userData = {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       profileImage: user.profileImage,

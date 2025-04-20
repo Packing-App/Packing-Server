@@ -23,7 +23,7 @@ const getMyProfile = async (req, res) => {
 
     // 필요한 사용자 정보만 반환
     const userData = {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       profileImage: user.profileImage,
@@ -56,7 +56,7 @@ const getUserProfile = async (req, res) => {
 
     // 공개 프로필 정보만 반환
     const userData = {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       profileImage: user.profileImage,
       intro: user.intro
@@ -107,7 +107,7 @@ const updateProfile = async (req, res) => {
 
     // 응답 데이터 구성
     const userData = {
-      id: updatedUser._id,
+      _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
       profileImage: updatedUser.profileImage,

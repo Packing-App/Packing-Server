@@ -14,7 +14,9 @@ const userRoutes = require('./routes/users');
 const friendshipRoutes = require('./routes/friendships');
 const journeyRoutes = require('./routes/journeys');
 const packingItemRoutes = require('./routes/packingItems');
-const notificationRoutes = require('./routes/notifications');
+const locationRoutes = require('./routes/locationRoutes');
+const deviceRoutes = require('./routes/deviceRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Passport 설정
 require('./config/passport');
@@ -49,6 +51,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/friendships', friendshipRoutes);
 app.use('/api/journeys', journeyRoutes);
 app.use('/api/packing-items', packingItemRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/devices', deviceRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // 에러 핸들링 미들웨어 - 임시 간단한 에러 핸들러 추가

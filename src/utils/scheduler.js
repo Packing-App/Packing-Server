@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { getWeatherData, analyzeWeatherCondition } = require('./externalApiUtils');
 const { sendNotification } = require('../socket/socketSetup');
+const { sendPushToIOS } = require('../services/pushNotificationService');
 const logger = require('../config/logger');
 
 /**
@@ -28,6 +29,16 @@ const initSchedulers = () => {
       await scheduleWeatherAlerts();
     } catch (error) {
       logger.error(`날씨 알림 스케줄러 오류: ${error.message}`);
+    }
+  });
+
+  // 매주 월요일 오전 10시에 임박한 여행 알림 (한국 시간 기준)
+  cron.schedule('0 10 * * 1', async () => {
+    try {
+      logger.info('주간 여행 알림 스케줄러 실행 중...');
+      await scheduleWeeklyJourneyReminders();
+    } catch (error) {
+      logger.error(`주간 여행 알림 스케줄러 오류: ${error.message}`);
     }
   });
 
@@ -69,18 +80,36 @@ const scheduleJourneyReminders = async () => {
       );
 
       for (const participant of eligibleParticipants) {
+        // 알림 내용
+        const title = '여행 준비 알림';
+        const content = `'${journey.title}' 여행이 내일 시작합니다. 준비물을 확인해보세요!`;
+        
         // 알림 생성
         const notification = await Notification.create({
           userId: participant._id,
           journeyId: journey._id,
           type: 'reminder',
-          content: `'${journey.title}' 여행 하루 전입니다. 준비물을 확인해보세요!`,
+          content: content,
           isRead: false
         });
 
         // 소켓을 통한 실시간 알림 전송
         if (global.io) {
           sendNotification(global.io, participant._id.toString(), notification);
+        }
+        
+        // iOS 푸시 알림 전송 (추가)
+        if (participant.deviceToken) {
+          await sendPushToIOS(
+            participant.deviceToken, 
+            title, 
+            content,
+            { 
+              notificationId: notification._id.toString(),
+              journeyId: journey._id.toString(),
+              type: 'reminder'
+            }
+          );
         }
 
         logger.info(`여행 알림 생성: ${notification._id} → ${participant.name}`);
@@ -124,8 +153,8 @@ const scheduleWeatherAlerts = async () => {
         // 여행지 날씨 조회
         const weatherData = await getWeatherData(journey.destination, null, journey.startDate);
         
-        if (!weatherData) {
-          logger.warn(`${journey.destination} 날씨 정보를 가져올 수 없습니다.`);
+        if (!weatherData || weatherData.error) {
+          logger.warn(`${journey.destination} 날씨 정보를 가져올 수 없습니다: ${weatherData?.error || '알 수 없는 오류'}`);
           continue;
         }
 
@@ -134,10 +163,12 @@ const scheduleWeatherAlerts = async () => {
         
         // 특별한 날씨 상태인 경우만 알림 생성 (비, 눈, 매우 덥거나 추운 경우)
         if (condition === 'normal') {
+          logger.info(`${journey.destination} 날씨가 정상 범위입니다. 알림 생성 건너뜀.`);
           continue;
         }
 
         // 알림 내용 설정
+        let title = '날씨 알림';
         let content = '';
         let itemToRemind = '';
 
@@ -167,17 +198,33 @@ const scheduleWeatherAlerts = async () => {
 
         for (const participant of eligibleParticipants) {
           // 알림 생성
+          const fullContent = `${content} ${itemToRemind}`;
           const notification = await Notification.create({
             userId: participant._id,
             journeyId: journey._id,
             type: 'weather',
-            content: `${content} ${itemToRemind}`,
+            content: fullContent,
             isRead: false
           });
 
           // 소켓을 통한 실시간 알림 전송
           if (global.io) {
             sendNotification(global.io, participant._id.toString(), notification);
+          }
+          
+          // iOS 푸시 알림 전송
+          if (participant.deviceToken) {
+            await sendPushToIOS(
+              participant.deviceToken, 
+              title, 
+              fullContent,
+              { 
+                notificationId: notification._id.toString(),
+                journeyId: journey._id.toString(),
+                type: 'weather',
+                weatherCondition: condition
+              }
+            );
           }
 
           logger.info(`날씨 알림 생성: ${notification._id} → ${participant.name}`);
@@ -190,6 +237,85 @@ const scheduleWeatherAlerts = async () => {
     }
   } catch (error) {
     logger.error(`날씨 알림 스케줄링 오류: ${error.message}`);
+    throw error;
+  }
+};
+
+/**
+ * 주간 여행 알림 스케줄링 (매주 월요일)
+ */
+const scheduleWeeklyJourneyReminders = async () => {
+  try {
+    // 이번 주에 시작하는 여행 찾기 (오늘부터 7일 이내)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const oneWeekLater = new Date(today);
+    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+    
+    const upcomingJourneys = await Journey.find({
+      startDate: {
+        $gte: today,
+        $lt: oneWeekLater
+      }
+    }).populate('participants');
+
+    if (upcomingJourneys.length === 0) {
+      logger.info('이번 주에 시작하는 여행이 없습니다.');
+      return;
+    }
+
+    logger.info(`이번 주에 시작하는 여행 ${upcomingJourneys.length}개 찾음`);
+
+    // 각 여행에 대해 알림 생성
+    for (const journey of upcomingJourneys) {
+      // 여행 시작까지 남은 일수 계산
+      const daysUntil = Math.ceil((journey.startDate - today) / (1000 * 60 * 60 * 24));
+      
+      // 푸시 알림 활성화한 사용자에게만 알림 전송
+      const eligibleParticipants = journey.participants.filter(
+        participant => participant.pushNotificationEnabled
+      );
+
+      for (const participant of eligibleParticipants) {
+        // 알림 내용
+        const title = '이번 주 여행 알림';
+        const content = `'${journey.title}' 여행이 ${daysUntil}일 후에 시작합니다. 준비 계획을 세워보세요!`;
+        
+        // 알림 생성
+        const notification = await Notification.create({
+          userId: participant._id,
+          journeyId: journey._id,
+          type: 'reminder',
+          content: content,
+          isRead: false
+        });
+
+        // 소켓을 통한 실시간 알림 전송
+        if (global.io) {
+          sendNotification(global.io, participant._id.toString(), notification);
+        }
+        
+        // iOS 푸시 알림 전송
+        if (participant.deviceToken) {
+          await sendPushToIOS(
+            participant.deviceToken, 
+            title, 
+            content,
+            { 
+              notificationId: notification._id.toString(),
+              journeyId: journey._id.toString(),
+              type: 'reminder',
+              daysUntil: daysUntil
+            }
+          );
+        }
+
+        logger.info(`주간 여행 알림 생성: ${notification._id} → ${participant.name}`);
+      }
+    }
+  } catch (error) {
+    logger.error(`주간 여행 알림 스케줄링 오류: ${error.message}`);
     throw error;
   }
 };

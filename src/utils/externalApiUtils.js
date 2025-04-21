@@ -1,33 +1,43 @@
 // src/utils/externalApiUtils.js
 const axios = require('axios');
 const logger = require('../config/logger');
+const { translateCityName } = require('./locationUtils');
 
 /**
  * Open Weather Map API를 통해 날씨 정보를 가져옵니다.
- * @param {string} location 지역 이름
+ * @param {string} location 지역 이름 (한글)
  * @param {string} countryCode 국가 코드 (예: KR, US)
  * @param {Date} date 날짜 (미래 날짜는 예보 데이터)
  */
-const getWeatherData = async (location, countryCode = 'KR', date = null) => {
+const getWeatherData = async (location, countryCode = null, date = null) => {
   try {
     // 환경 변수에서 API 키 가져오기
     const apiKey = process.env.OPENWEATHER_API_KEY;
     
     if (!apiKey) {
       logger.error('OpenWeather API 키가 설정되지 않았습니다.');
-      return null;
+      return { error: 'API_KEY_MISSING', message: 'API 키가 설정되지 않았습니다.' };
     }
 
+    // 한글 도시명을 영문으로 변환 
+    const translatedCity = translateCityName(location);
+    const cityName = translatedCity.name;
+    const cityCountryCode = countryCode || translatedCity.countryCode;
+    
+    logger.info(`날씨 조회: ${location}(${cityName}) / 국가코드: ${cityCountryCode}`);
+
     // 현재 날씨 API URL
-    const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${location},${countryCode}&appid=${apiKey}&units=metric&lang=kr`;
+    const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},${cityCountryCode}&appid=${apiKey}&units=metric&lang=kr`;
     
     // 5일 예보 API URL (3시간 간격)
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${location},${countryCode}&appid=${apiKey}&units=metric&lang=kr`;
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${cityName},${cityCountryCode}&appid=${apiKey}&units=metric&lang=kr`;
 
     // 날짜가 없거나 오늘이면 현재 날씨 반환
     if (!date || isSameDay(new Date(), date)) {
       const response = await axios.get(currentUrl);
-      return parseCurrentWeather(response.data);
+      const parsedData = parseCurrentWeather(response.data);
+      parsedData.originalLocation = location; // 원본 한글 지역명 추가
+      return parsedData;
     }
     
     // 미래 날짜인 경우 예보 데이터 반환
@@ -37,14 +47,37 @@ const getWeatherData = async (location, countryCode = 'KR', date = null) => {
     // 5일 이내의 예보만 가능
     if (daysDiff > 5) {
       logger.warn(`5일 이상 후의 날씨는 예측할 수 없습니다: ${daysDiff}일 후`);
-      return null;
+      // 대체값으로 현재 날씨 반환
+      const response = await axios.get(currentUrl);
+      const parsedData = parseCurrentWeather(response.data);
+      parsedData.originalLocation = location; // 원본 한글 지역명 추가
+      parsedData.isCurrentWeather = true; // 예보가 아닌 현재 날씨임을 표시
+      parsedData.noticeMessage = '5일 이상의 예보는 제공되지 않아 현재 날씨를 표시합니다.';
+      return parsedData;
     }
     
     const response = await axios.get(forecastUrl);
-    return findForecastForDate(response.data, date);
+    const forecastData = findForecastForDate(response.data, date);
+    forecastData.originalLocation = location; // 원본 한글 지역명 추가
+    return forecastData;
   } catch (error) {
     logger.error(`날씨 정보 조회 오류: ${error.message}`);
-    return null;
+    
+    // 오류의 종류에 따라 더 구체적인 정보 반환
+    if (error.response) {
+      if (error.response.status === 404) {
+        logger.error(`도시를 찾을 수 없음: ${location}`);
+        return { error: 'CITY_NOT_FOUND', message: '해당 도시를 찾을 수 없습니다.' };
+      } else if (error.response.status === 401) {
+        logger.error('API 키 오류');
+        return { error: 'API_KEY_ERROR', message: 'API 인증에 실패했습니다.' };
+      }
+    } else if (error.request) {
+      logger.error('서버 응답 없음');
+      return { error: 'SERVER_NO_RESPONSE', message: '날씨 서버에서 응답이 없습니다.' };
+    }
+    
+    return { error: 'UNKNOWN_ERROR', message: '날씨 정보를 가져오는 중 오류가 발생했습니다.' };
   }
 };
 
@@ -81,6 +114,7 @@ const findForecastForDate = (data, targetDate) => {
   });
 
   if (targetDayForecasts.length === 0) {
+    logger.warn(`${targetDate.toISOString().split('T')[0]} 날짜의 예보를 찾을 수 없습니다.`);
     return null;
   }
 
@@ -90,20 +124,35 @@ const findForecastForDate = (data, targetDate) => {
 
   targetDayForecasts.forEach(forecast => {
     const forecastDate = new Date(forecast.dt * 1000);
-    forecastDate.setHours(12, 0, 0, 0);
+    const hours = forecastDate.getHours();
+    const diff = Math.abs(hours - 12);
     
-    const targetDateNoon = new Date(targetDate);
-    targetDateNoon.setHours(12, 0, 0, 0);
-    
-    const timeDiff = Math.abs(forecastDate.getTime() - targetDateNoon.getTime());
-    
-    if (timeDiff < minTimeDiff) {
-      minTimeDiff = timeDiff;
+    if (diff < minTimeDiff) {
+      minTimeDiff = diff;
       closestForecast = forecast;
     }
   });
 
-  return parseCurrentWeather(closestForecast);
+  // 선택된 예보를 현재 날씨 형식으로 변환
+  const forecastData = {
+    temp: closestForecast.main.temp,
+    tempMin: closestForecast.main.temp_min,
+    tempMax: closestForecast.main.temp_max,
+    humidity: closestForecast.main.humidity,
+    weatherMain: closestForecast.weather[0].main,
+    weatherDescription: closestForecast.weather[0].description,
+    weatherIcon: closestForecast.weather[0].icon,
+    cityName: data.city.name,
+    countryCode: data.city.country,
+    windSpeed: closestForecast.wind.speed,
+    clouds: closestForecast.clouds.all,
+    rain: closestForecast.rain ? closestForecast.rain['3h'] || 0 : 0,
+    timestamp: new Date(closestForecast.dt * 1000),
+    iconUrl: `http://openweathermap.org/img/wn/${closestForecast.weather[0].icon}@2x.png`,
+    isForecast: true // 예보 데이터임을 표시
+  };
+
+  return forecastData;
 };
 
 /**
@@ -123,7 +172,7 @@ const isSameDay = (date1, date2) => {
  * @returns {string} 날씨 상태 (rain, snow, hot, cold, normal)
  */
 const analyzeWeatherCondition = (weatherData) => {
-  if (!weatherData) return 'normal';
+  if (!weatherData || weatherData.error) return 'normal';
 
   const { weatherMain, temp } = weatherData;
 
@@ -142,7 +191,7 @@ const analyzeWeatherCondition = (weatherData) => {
 
 /**
  * Unsplash API를 통해 여행지 이미지를 가져옵니다.
- * @param {string} query 검색어 (여행지 이름)
+ * @param {string} query 검색어 (여행지 이름, 한글)
  * @param {string} theme 테마 (beach, mountain, city 등)
  */
 const getDestinationImage = async (query, theme = null) => {
@@ -152,14 +201,20 @@ const getDestinationImage = async (query, theme = null) => {
     
     if (!apiKey) {
       logger.error('Unsplash API 키가 설정되지 않았습니다.');
-      return null;
+      return getDefaultThemeImage(theme);
     }
 
+    // 한글 도시명을 영문으로 변환
+    const translatedCity = translateCityName(query);
+    const cityName = translatedCity.name;
+
     // 검색어 조합 (여행지 + 테마)
-    let searchQuery = query;
+    let searchQuery = cityName;
     if (theme) {
-      searchQuery = `${query} ${theme}`;
+      searchQuery = `${cityName} ${theme}`;
     }
+
+    logger.info(`이미지 검색: ${query}(${searchQuery})`);
 
     const url = `https://api.unsplash.com/photos/random?query=${encodeURIComponent(searchQuery)}&orientation=landscape&client_id=${apiKey}`;
     
@@ -168,7 +223,9 @@ const getDestinationImage = async (query, theme = null) => {
     return {
       imageUrl: response.data.urls.regular,
       authorName: response.data.user.name,
-      authorUrl: response.data.user.links.html
+      authorUrl: response.data.user.links.html,
+      originalQuery: query,
+      translatedQuery: searchQuery
     };
   } catch (error) {
     logger.error(`여행지 이미지 조회 오류: ${error.message}`);
@@ -204,7 +261,8 @@ const getDefaultThemeImage = (theme) => {
   return {
     imageUrl,
     authorName: 'Default Image',
-    authorUrl: 'https://unsplash.com/'
+    authorUrl: 'https://unsplash.com/',
+    isDefaultImage: true
   };
 };
 

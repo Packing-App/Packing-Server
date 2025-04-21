@@ -51,9 +51,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
-    pushNotificationEnabled: {  // 푸시 알림 설정
+    // 푸시 알림 관련 필드 추가
+    pushNotificationEnabled: {
       type: Boolean,
       default: true
+    },
+    deviceToken: {
+      type: String,
+      default: null
+    },
+    deviceType: {
+      type: String,
+      enum: ['ios', 'android', 'web', null],
+      default: null
     },
     // 이메일 검증 관련 필드 수정
     isEmailVerified: {

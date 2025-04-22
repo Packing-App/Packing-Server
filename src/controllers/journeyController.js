@@ -105,7 +105,7 @@ const createJourney = async (req, res) => {
     const populatedJourney = await Journey.findById(journey._id)
       .populate('participants', 'email name profileImage socialType');
 
-    return sendSuccess(res, 201, '여행이 성공적으로 생성되었습니다', journey);
+    return sendSuccess(res, 201, '여행이 성공적으로 생성되었습니다', populatedJourney);
   } catch (error) {
     logger.error(`여행 생성 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');

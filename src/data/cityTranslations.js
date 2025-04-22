@@ -198,6 +198,8 @@ const cityTranslations = {
     '멕시코시티': { en: 'Mexico City', countryCode: 'MX' },
     '칸쿤': { en: 'Cancun', countryCode: 'MX' },
     '아바나': { en: 'Havana', countryCode: 'CU' },
+    '암만': { en: 'Amman', countryCode: 'JO' },
+    '베이루트': { en: 'Beirut', countryCode: 'LB' },
   };
   
   module.exports = cityTranslations;

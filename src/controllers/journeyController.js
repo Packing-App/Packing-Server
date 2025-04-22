@@ -102,8 +102,8 @@ const createJourney = async (req, res) => {
       imageUrl: imageData ? imageData.imageUrl : null // 이미지 URL 저장
     });
 
-    // 테마 기반 이미지 URL 설정 (향후 구현)
-    // 이 부분은 추후 여행지 이미지 API를 연동하여 구현
+    const populatedJourney = await Journey.findById(journey._id)
+      .populate('participants', 'email name profileImage socialType');
 
     return sendSuccess(res, 201, '여행이 성공적으로 생성되었습니다', journey);
   } catch (error) {

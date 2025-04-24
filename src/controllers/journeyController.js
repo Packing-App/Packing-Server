@@ -390,10 +390,10 @@ const getRecommendations = async (req, res) => {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
     }
 
-    // 참여자 확인 (보안 검사)
-    if (!journey.participants.includes(req.user._id)) {
-      return sendError(res, 403, '이 여행에 접근할 권한이 없습니다');
-    }
+    // // 참여자 확인 (보안 검사)
+    // if (!journey.participants.includes(req.user._id)) {
+    //   return sendError(res, 403, '이 여행에 접근할 권한이 없습니다');
+    // }
 
     // 준비물 추천 서비스 호출
     const itemRecommendationService = require('../services/itemRecommendationService');

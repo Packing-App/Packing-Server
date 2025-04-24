@@ -215,6 +215,94 @@ const createBulkPackingItems = async (req, res) => {
 };
 
 /**
+ * 추천 준비물에서 선택한 항목들을 일괄 등록
+ * @route POST /api/packing-items/from-recommendations
+ * @access Private
+ */
+const createSelectedRecommendedItems = async (req, res) => {
+  try {
+    const { journeyId, selectedItems, mergeDuplicates = true } = req.body;
+
+    if (!journeyId || !selectedItems || !selectedItems.length) {
+      return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    }
+
+    // 여행 정보 조회
+    const journey = await Journey.findById(journeyId);
+
+    if (!journey) {
+      return sendError(res, 404, '여행을 찾을 수 없습니다');
+    }
+
+    // 권한 확인 (참가자만 생성 가능)
+    if (!journey.participants.includes(req.user._id)) {
+      return sendError(res, 403, '이 여행의 준비물을 생성할 권한이 없습니다');
+    }
+
+    const createdItems = [];
+    const updatedItems = [];
+
+    // 각 아이템에 대해 중복 확인 후 생성 또는 업데이트
+    for (const item of selectedItems) {
+      // 이름이 같은 아이템이 이미 있는지 확인
+      if (mergeDuplicates) {
+        const existingItem = await PackingItem.findOne({
+          journeyId,
+          name: item.name,
+          isShared: false, // 개인 준비물로 기본 설정
+          createdBy: req.user._id
+        });
+
+        // 이미 있으면 count만 업데이트
+        if (existingItem) {
+          existingItem.count = item.count || existingItem.count;
+          await existingItem.save();
+          await existingItem.populate('assignedTo', 'name profileImage');
+          await existingItem.populate('createdBy', 'name profileImage');
+          updatedItems.push(existingItem);
+          continue;
+        }
+      }
+
+      // 새 준비물 생성
+      const newItem = await PackingItem.create({
+        journeyId,
+        name: item.name,
+        count: item.count || 1,
+        category: item.category,
+        isShared: false, // 개인 준비물로 기본 설정
+        createdBy: req.user._id,
+        isChecked: false
+      });
+
+      // 상세 정보를 위한 populate
+      await newItem.populate('assignedTo', 'name profileImage');
+      await newItem.populate('createdBy', 'name profileImage');
+      
+      createdItems.push(newItem);
+    }
+
+    // 생성 및 업데이트된 모든 아이템 합치기
+    const allItems = [...createdItems, ...updatedItems];
+
+    // 결과 메시지 생성
+    let message = '';
+    if (createdItems.length > 0 && updatedItems.length > 0) {
+      message = `${createdItems.length}개의 준비물이 생성되고, ${updatedItems.length}개의 준비물이 업데이트되었습니다`;
+    } else if (createdItems.length > 0) {
+      message = `${createdItems.length}개의 준비물이 성공적으로 생성되었습니다`;
+    } else {
+      message = `${updatedItems.length}개의 준비물이 업데이트되었습니다`;
+    }
+
+    return sendSuccess(res, 201, message, allItems);
+  } catch (error) {
+    logger.error(`추천 준비물 일괄 생성 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
+/**
  * 준비물 업데이트
  * @route PUT /api/packing-items/:id
  * @access Private
@@ -461,6 +549,7 @@ module.exports = {
   getPackingItemsByJourney,
   createPackingItem,
   createBulkPackingItems,
+  createSelectedRecommendedItems,
   updatePackingItem,
   togglePackingItem,
   deletePackingItem,

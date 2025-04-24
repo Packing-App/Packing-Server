@@ -13,6 +13,9 @@ router.post('/', protect, packingItemController.createPackingItem);
 // 준비물 일괄 생성 (테마 템플릿에서 가져오기)
 router.post('/bulk', protect, packingItemController.createBulkPackingItems);
 
+// 추천 준비물에서 선택한 항목들을 일괄 등록
+router.post('/from-recommendations', protect, packingItemController.createSelectedRecommendedItems);
+
 // 준비물 업데이트
 router.put('/:id', protect, packingItemController.updatePackingItem);
 

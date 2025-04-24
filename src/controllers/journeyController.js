@@ -383,8 +383,9 @@ const respondToInvitation = async (req, res) => {
  */
 const getRecommendations = async (req, res) => {
   try {
-    const journey = await Journey.findById(req.params.id);
-
+    const journey = await Journey.findById(req.params.id)
+    .populate('participants', 'email name profileImage socialType');
+    
     if (!journey) {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
     }

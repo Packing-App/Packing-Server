@@ -419,14 +419,7 @@ const getRecommendations = async (req, res) => {
     });
 
     return sendSuccess(res, 200, '여행 정보에 맞는 추천 준비물 목록입니다', {
-      journey: {
-        title: journey.title,
-        destination: journey.destination,
-        startDate: journey.startDate,
-        endDate: journey.endDate,
-        theme: journey.theme,
-        transportType: journey.transportType
-      },
+      journey: journey,
       categories: categories
     });
   } catch (error) {

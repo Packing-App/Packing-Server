@@ -111,7 +111,7 @@ const appleVerify = async (req, res) => {
 
     // 사용자 응답 데이터 구성
     const userData = {
-      id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       profileImage: user.profileImage,

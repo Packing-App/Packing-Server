@@ -208,11 +208,8 @@ const getDestinationImage = async (query, theme = null) => {
     const translatedCity = translateCityName(query);
     const cityName = translatedCity.name;
 
-    // 검색어 조합 (여행지 + 테마)
-    let searchQuery = cityName;
-    if (theme) {
-      searchQuery = `${cityName} ${theme}`;
-    }
+    // 검색어로 cityName만 사용 (theme은 사용하지 않음)
+    const searchQuery = cityName;
 
     logger.info(`이미지 검색: ${query}(${searchQuery})`);
 

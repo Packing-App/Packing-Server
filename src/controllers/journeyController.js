@@ -2,7 +2,7 @@
 const Journey = require('../models/Journey');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const ThemeTemplate = require('../models/ThemeTemplate');
+const PackingItem = require('../models/PackingItem');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
@@ -195,8 +195,8 @@ const deleteJourney = async (req, res) => {
     // 관련 알림 삭제 (Journey ID와 연결된 모든 알림)
     await Notification.deleteMany({ journeyId: req.params.id });
 
-    // 향후 패킹 아이템도 삭제 구현 필요
-    // await PackingItem.deleteMany({ journeyId: req.params.id });
+    // 여행 관련 준비물 삭제
+    await PackingItem.deleteMany({ journeyId: req.params.id });
 
     return sendSuccess(res, 200, '여행이 성공적으로 삭제되었습니다');
   } catch (error) {

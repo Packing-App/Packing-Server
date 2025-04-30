@@ -17,7 +17,6 @@ const getUserNotifications = async (req, res) => {
     // 사용자의 알림만 조회하여 최신순으로 정렬
     const notifications = await Notification.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
-      .populate('journeyId', 'title destination startDate endDate');
 
     return sendSuccess(res, 200, '알림 목록을 성공적으로 조회했습니다', notifications);
   } catch (error) {

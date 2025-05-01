@@ -121,98 +121,116 @@ const createPackingItem = async (req, res) => {
 };
 
 /**
- * 준비물 일괄 생성 (테마 템플릿에서 가져오기)
+ * 여러 개의 준비물 일괄 생성
  * @route POST /api/packing-items/bulk
  * @access Private
+ * @returns {Object} APIResponse<{createdItems: Array<PackingItem>}>
  */
 const createBulkPackingItems = async (req, res) => {
   try {
-    const { journeyId, templateName, selectedItems, mergeDuplicates = true } = req.body;
-
-    if (!journeyId || !templateName || !selectedItems || !selectedItems.length) {
-      return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    const { journeyId, items, mergeDuplicates = true } = req.body;
+    if (!journeyId || !items || !Array.isArray(items) || items.length === 0) {
+      return sendError(res, 400, '유효한 여행 ID와 준비물 목록이 필요합니다');
     }
-
     // 여행 정보 조회
     const journey = await Journey.findById(journeyId);
-
     if (!journey) {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
     }
-
     // 권한 확인 (참가자만 생성 가능)
     if (!journey.participants.includes(req.user._id)) {
       return sendError(res, 403, '이 여행의 준비물을 생성할 권한이 없습니다');
     }
-
-    // 테마 템플릿 조회
-    const themeTemplate = await ThemeTemplate.findOne({ themeName: templateName });
-
-    if (!themeTemplate) {
-      return sendError(res, 404, '템플릿을 찾을 수 없습니다');
-    }
-
-    // 선택된 아이템만 필터링
-    const itemsToCreate = themeTemplate.items.filter(item => 
-      selectedItems.includes(item.name)
-    );
-
     const createdItems = [];
-    const updatedItems = [];
-
-    // 각 아이템에 대해 중복 확인 후 생성 또는 업데이트
-    for (const item of itemsToCreate) {
-      // 이름이 같은 아이템이 이미 있는지 확인
-      if (mergeDuplicates) {
-        const existingItem = await PackingItem.findOne({
-          journeyId,
-          name: item.name,
-          isShared: false, // 개인 준비물로 기본 설정
-          createdBy: req.user._id
-        });
-
-        // 이미 있으면 count만 증가
-        if (existingItem) {
-          existingItem.count += 1;
-          await existingItem.save();
-          updatedItems.push(existingItem);
+    const errors = [];
+    // 각 아이템을 순회하며 처리
+    for (const item of items) {
+      try {
+        // 필수 필드 검증
+        if (!item.name || !item.category) {
+          errors.push({
+            name: item.name || '이름 없음',
+            error: '준비물 이름과 카테고리는 필수입니다'
+          });
           continue;
         }
+        // 기본값 설정
+        const count = item.count || 1;
+        const isShared = item.isShared || false;
+        const assignedTo = item.assignedTo || (isShared ? null : req.user._id);
+        // 할당 대상이 있는 경우 참가자 확인
+        if (assignedTo && !journey.participants.includes(assignedTo)) {
+          errors.push({
+            name: item.name,
+            error: '할당 대상은 여행 참가자여야 합니다'
+          });
+          continue;
+        }
+        // 이름이 같은 아이템이 이미 있는지 확인 (생성자가 같고, 공유 상태가 같은 경우)
+        let packingItem;
+        if (mergeDuplicates) {
+          const existingItem = await PackingItem.findOne({
+            journeyId,
+            name: item.name,
+            isShared,
+            createdBy: req.user._id,
+            // 할당된 사용자가 같거나 둘 다 없는 경우만 병합
+            ...(isShared ? { assignedTo: assignedTo || null } : {})
+          });
+          // 이미 있으면 count만 증가
+          if (existingItem) {
+            existingItem.count += count;
+            packingItem = await existingItem.save();
+          }
+        }
+        // 새 준비물 생성
+        if (!packingItem) {
+          packingItem = await PackingItem.create({
+            journeyId,
+            name: item.name,
+            count,
+            category: item.category,
+            isShared,
+            assignedTo: isShared ? assignedTo : null, // 공유 준비물만 할당 가능
+            createdBy: req.user._id,
+            isChecked: false
+          });
+        }
+        // 상세 정보를 위한 populate
+        await packingItem.populate('assignedTo', 'name profileImage');
+        await packingItem.populate('createdBy', 'name profileImage');
+        createdItems.push(packingItem);
+      } catch (error) {
+        errors.push({
+          name: item.name || '이름 없음',
+          error: error.message
+        });
       }
-
-      // 새 준비물 생성
-      const newItem = await PackingItem.create({
-        journeyId,
-        name: item.name,
-        count: 1,
-        category: item.category,
-        isShared: false, // 개인 준비물로 기본 설정
-        createdBy: req.user._id,
-        isChecked: false
-      });
-
-      createdItems.push(newItem);
     }
-
-    // 생성 및 업데이트된 모든 아이템 합치기
-    const allItems = [...createdItems, ...updatedItems];
-
-    // 결과 메시지 생성
-    let message = '';
-    if (createdItems.length > 0 && updatedItems.length > 0) {
-      message = `${createdItems.length}개의 준비물이 생성되고, ${updatedItems.length}개의 준비물이 업데이트되었습니다`;
-    } else if (createdItems.length > 0) {
-      message = `${createdItems.length}개의 준비물이 성공적으로 생성되었습니다`;
+    // 결과 반환
+    const statusCode = createdItems.length > 0 ? 201 : 400;
+    
+    if (createdItems.length > 0) {
+      return sendSuccess(
+        res, 
+        statusCode, 
+        `${createdItems.length}개의 준비물이 성공적으로 생성되었습니다`, 
+        { createdItems }
+      );
     } else {
-      message = `${updatedItems.length}개의 준비물이 업데이트되었습니다`;
+      return sendError(
+        res, 
+        statusCode, 
+        '준비물 생성에 실패했습니다',
+        { errors }
+      );
     }
-
-    return sendSuccess(res, 201, message, allItems);
   } catch (error) {
     logger.error(`준비물 일괄 생성 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');
   }
 };
+
 
 /**
  * 추천 준비물에서 선택한 항목들을 일괄 등록

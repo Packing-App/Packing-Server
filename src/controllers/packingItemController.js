@@ -223,7 +223,7 @@ const createBulkPackingItems = async (req, res) => {
         res, 
         statusCode, 
         `${createdItems.length}개의 준비물이 성공적으로 생성되었습니다`, 
-        { createdItems }
+        createdItems
       );
     } else {
       return sendError(

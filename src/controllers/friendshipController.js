@@ -212,29 +212,40 @@ const respondToFriendRequest = async (req, res) => {
 
     // 친구 요청 수락 시 알림 생성
     if (accept) {
-      await Notification.create({
+      // 알림 생성 결과를 변수에 저장
+      const notification = await Notification.create({
         userId: friendship.requesterId,
         type: 'invitation',
         content: `${req.user.name}님이 친구 요청을 수락했습니다.`
       });
 
+      // 소켓을 통한 실시간 알림 전송
+      if (global.io) {
+        sendNotification(global.io, friendship.requesterId.toString(), notification);
+      }
+
       // iOS 푸시 알림 전송
       const requester = await User.findById(friendship.requesterId);
-      if (requester.deviceToken && requester.pushNotificationEnabled) {
+      if (requester && requester.deviceToken && requester.pushNotificationEnabled) {
         const title = '친구 요청 수락';
         const content = `${req.user.name}님이 친구 요청을 수락했습니다.`;
         
-        await sendPushToIOS(
-          requester.deviceToken,
-          title,
-          content,
-          {
-            notificationId: notification._id.toString(),
-            type: 'invitation'
-          }
-        );
-        
-        logger.info(`친구 요청 수락 푸시 알림 전송: ${requester.name}에게`);
+        try {
+          await sendPushToIOS(
+            requester.deviceToken,
+            title,
+            content,
+            {
+              notificationId: notification._id.toString(),
+              type: 'invitation'
+            }
+          );
+          
+          logger.info(`친구 요청 수락 푸시 알림 전송: ${requester.name}에게`);
+        } catch (pushError) {
+          // 푸시 전송 실패해도 API 응답에는 영향 없도록 처리
+          logger.error(`푸시 알림 전송 오류: ${pushError.message}`);
+        }
       }
     }
 

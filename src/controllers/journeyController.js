@@ -259,6 +259,31 @@ const inviteParticipant = async (req, res) => {
       content: `${req.user.name}님이 '${journey.title}' 여행에 초대했습니다.`
     });
 
+
+    // 소켓을 통한 실시간 알림 전송 (추가)
+    if (global.io) {
+      sendNotification(global.io, invitedUser._id.toString(), notification);
+    }
+    
+    // iOS 푸시 알림 전송 (추가)
+    if (invitedUser.deviceToken && invitedUser.pushNotificationEnabled) {
+      const title = '여행 초대';
+      const content = `${req.user.name}님이 '${journey.title}' 여행에 초대했습니다.`;
+      
+      await sendPushToIOS(
+        invitedUser.deviceToken,
+        title,
+        content,
+        {
+          notificationId: notification._id.toString(),
+          journeyId: journey._id.toString(),
+          type: 'invitation'
+        }
+      );
+      
+      logger.info(`여행 초대 푸시 알림 전송: ${invitedUser.name}에게`);
+    }
+
     return sendSuccess(res, 200, '여행 초대가 성공적으로 전송되었습니다', { notification });
   } catch (error) {
     logger.error(`여행 참가자 초대 오류: ${error.message}`);

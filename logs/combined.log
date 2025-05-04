@@ -1,0 +1,5 @@
+{"level":"info","message":"알림 스케줄러가 초기화되었습니다.","timestamp":"2025-05-04 23:01:40"}
+{"level":"error","message":"Port 5000 is busy, trying port 5001...","timestamp":"2025-05-04 23:01:40"}
+{"level":"info","message":"Server running in production mode on port 5001","timestamp":"2025-05-04 23:01:40"}
+{"level":"info","message":"MongoDB Connected: cluster0-shard-00-01.2mvqu.mongodb.net","timestamp":"2025-05-04 23:01:41"}
+{"level":"info","message":"Theme templates already exist, skipping seed","timestamp":"2025-05-04 23:01:41"}

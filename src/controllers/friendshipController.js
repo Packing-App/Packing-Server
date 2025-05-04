@@ -251,9 +251,9 @@ const searchFriendByEmail = async (req, res) => {
       _id: { $ne: req.user._id } // 자기 자신 제외
     }).select('name email profileImage');
 
-    if (!users.length) {
-      return sendError(res, 404, '해당 이메일을 가진 사용자를 찾을 수 없습니다');
-    }
+    // if (!users.length) {
+    //   return sendError(res, 404, '해당 이메일을 가진 사용자를 찾을 수 없습니다');
+    // }
 
     // 기존 친구 관계 확인
     const friendshipStatuses = await Promise.all(

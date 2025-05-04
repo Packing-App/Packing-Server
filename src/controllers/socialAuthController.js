@@ -139,7 +139,7 @@ const revokeAppleAccount = async (user) => {
     }
     
     // Apple의 OAuth 토큰 설정
-    const client_id = process.env.APPLE_CLIENT_ID;
+    const client_id = process.env.APPLE_SERVICE_ID;
     const client_secret = createAppleClientSecret(); // Apple 토큰 생성 함수
     
     // Apple 연결 해제 API 호출

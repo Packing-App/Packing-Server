@@ -26,7 +26,7 @@ const createAppleClientSecret = () => {
       iat: now,                                 // 발급 시간 (현재 시간)
       exp: now + 15777000,                      // 만료 시간 (최대 6개월)
       aud: 'https://appleid.apple.com',         // 고정 값
-      sub: process.env.APPLE_CLIENT_ID,        // Services ID (앱의 Sign in with Apple 서비스 ID)
+      sub: process.env.APPLE_SERVICE_ID,        // Services ID (앱의 Sign in with Apple 서비스 ID)
     };
     
     // JWT 헤더

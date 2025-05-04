@@ -6,6 +6,8 @@ const PackingItem = require('../models/PackingItem');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
+const { sendNotification } = require('../socket/socketSetup');
+const { sendPushToIOS } = require('../services/pushNotificationService');
 
 /**
  * 사용자의 여행 목록 조회

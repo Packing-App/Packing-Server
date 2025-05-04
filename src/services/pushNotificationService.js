@@ -53,6 +53,14 @@ const sendPushToIOS = async (deviceToken, title, body, data = {}) => {
   try {
     const notification = new apn.Notification();
     
+    console.log('푸시 알림 전송 시도:', {
+      deviceToken: deviceToken.substring(0, 10) + '...',
+      title: title,
+      body: body,
+      topic: notification.topic,  // 실제 사용되는 topic 값 확인
+      apsEnvironment: process.env.NODE_ENV === 'production' ? 'production' : 'development'
+    });
+
     notification.expiry = Math.floor(Date.now() / 1000) + 3600; // 1시간 후 만료
     notification.sound = 'default';
     notification.alert = {

@@ -393,6 +393,43 @@ const respondToInvitation = async (req, res) => {
         journey.participants.push(req.user._id);
         await journey.save();
       }
+
+      // 여행 생성자 정보 가져오기
+      const creator = await User.findById(journey.creatorId);
+      
+      // 생성자에게 알림 생성
+      const creatorNotification = await Notification.create({
+        userId: creator._id,
+        journeyId: journey._id,
+        type: 'invitation',
+        content: `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`,
+        isRead: false
+      });
+      
+      // 소켓을 통한 실시간 알림 전송
+      if (global.io) {
+        sendNotification(global.io, creator._id.toString(), creatorNotification);
+      }
+      
+      // iOS 푸시 알림 전송
+      if (creator.deviceToken && creator.pushNotificationEnabled) {
+        const title = '초대 수락';
+        const content = `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`;
+        
+        await sendPushToIOS(
+          creator.deviceToken,
+          title,
+          content,
+          {
+            notificationId: creatorNotification._id.toString(),
+            journeyId: journey._id.toString(),
+            type: 'invitation'
+          }
+        );
+        
+        logger.info(`초대 수락 푸시 알림 전송: ${creator.name}에게`);
+      }
+
       return sendSuccess(res, 200, '여행 초대를 수락했습니다');
     } else {
       return sendSuccess(res, 200, '여행 초대를 거절했습니다');

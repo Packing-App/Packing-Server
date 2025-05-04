@@ -4,6 +4,8 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
+const { sendNotification } = require('../socket/socketSetup');
+const { sendPushToIOS } = require('../services/pushNotificationService');
 
 /**
  * 친구 목록 조회
@@ -136,12 +138,36 @@ const sendFriendRequest = async (req, res) => {
       status: 'pending'
     });
 
+        
     // 알림 생성
     await Notification.create({
       userId: receiver._id,
       type: 'invitation',
       content: `${req.user.name}님이 친구 요청을 보냈습니다.`
     });
+
+    // 소켓을 통한 실시간 알림 전송
+    if (global.io) {
+      sendNotification(global.io, receiver._id.toString(), notification);
+    }
+
+    // iOS 푸시 알림 전송
+    if (receiver.deviceToken && receiver.pushNotificationEnabled) {
+      const title = '친구 요청';
+      const content = `${req.user.name}님이 친구 요청을 보냈습니다.`;
+      
+      await sendPushToIOS(
+        receiver.deviceToken,
+        title,
+        content,
+        {
+          notificationId: notification._id.toString(),
+          type: 'invitation'
+        }
+      );
+      
+      logger.info(`친구 요청 푸시 알림 전송: ${receiver.name}에게`);
+    }
 
     return sendSuccess(res, 201, '친구 요청을 성공적으로 보냈습니다', friendship);
   } catch (error) {
@@ -191,6 +217,25 @@ const respondToFriendRequest = async (req, res) => {
         type: 'invitation',
         content: `${req.user.name}님이 친구 요청을 수락했습니다.`
       });
+
+      // iOS 푸시 알림 전송
+      const requester = await User.findById(friendship.requesterId);
+      if (requester.deviceToken && requester.pushNotificationEnabled) {
+        const title = '친구 요청 수락';
+        const content = `${req.user.name}님이 친구 요청을 수락했습니다.`;
+        
+        await sendPushToIOS(
+          requester.deviceToken,
+          title,
+          content,
+          {
+            notificationId: notification._id.toString(),
+            type: 'invitation'
+          }
+        );
+        
+        logger.info(`친구 요청 수락 푸시 알림 전송: ${requester.name}에게`);
+      }
     }
 
     return sendSuccess(

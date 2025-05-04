@@ -123,6 +123,9 @@ const sendFriendRequest = async (req, res) => {
         } else {
           return sendError(res, 400, '해당 사용자가 이미 친구 요청을 보냈습니다. 요청을 수락해주세요.');
         }
+      } else if (existingFriendship.status === 'rejected') {
+        // 거절된 친구 요청이 있을 경우, 이를 삭제하고 새로운 요청 생성
+        await existingFriendship.deleteOne();
       }
     }
 

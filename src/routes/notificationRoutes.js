@@ -7,7 +7,8 @@ const {
   markAllNotificationsAsRead, 
   deleteNotification,
   createJourneyReminder,
-  createWeatherAlert
+  createWeatherAlert,
+  getUnreadNotificationsCount
 } = require('../controllers/notificationController');
 const { protect } = require('../middlewares/auth');
 
@@ -18,6 +19,7 @@ router.get('/', getUserNotifications);
 router.put('/:id/read', markNotificationAsRead);
 router.put('/read-all', markAllNotificationsAsRead);
 router.delete('/:id', deleteNotification);
+router.get('/unread-count', getUnreadNotificationsCount);
 
 // 테스트용 라우트
 router.post('/journey-reminder', createJourneyReminder);

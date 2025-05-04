@@ -277,11 +277,32 @@ const createWeatherAlert = async (req, res) => {
   }
 };
 
+/**
+ * 읽지 않은 알림 수 조회
+ * @route GET /api/notifications/unread-count
+ * @access Private
+ */
+const getUnreadNotificationsCount = async (req, res) => {
+  try {
+    // 사용자의 읽지 않은 알림 수 조회
+    const count = await Notification.countDocuments({ 
+      userId: req.user._id,
+      isRead: false 
+    });
+
+    return sendSuccess(res, 200, '읽지 않은 알림 수를 성공적으로 조회했습니다', { count });
+  } catch (error) {
+    logger.error(`읽지 않은 알림 수 조회 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
 module.exports = {
   getUserNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
   createJourneyReminder,
-  createWeatherAlert
+  createWeatherAlert,
+  getUnreadNotificationsCount
 };

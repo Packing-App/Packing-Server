@@ -141,7 +141,7 @@ const sendFriendRequest = async (req, res) => {
     // 알림 생성
     const notification = await Notification.create({
       userId: receiver._id,
-      type: 'invitation',
+      type: 'friendRequest',
       content: `${req.user.name}님이 친구 요청을 보냈습니다.`,
       // 친구 요청 ID를 메타데이터로 저장하여 나중에 알림 읽음 처리 시 사용
       metadata: {
@@ -165,7 +165,7 @@ const sendFriendRequest = async (req, res) => {
         content,
         {
           notificationId: notification._id.toString(),
-          type: 'invitation',
+          type: 'friendRequest',
           friendshipId: friendship._id.toString() // 친구 요청 ID도 함께 전송
         }
       );
@@ -220,7 +220,7 @@ const respondToFriendRequest = async (req, res) => {
       // 1. metadata.friendshipId로 찾기 (새로운 방식)
       let friendRequestNotification = await Notification.findOne({
         userId: req.user._id,
-        type: 'invitation',
+        type:  'friendRequest',
         'metadata.friendshipId': friendship._id.toString(),
         isRead: false
       });
@@ -232,7 +232,7 @@ const respondToFriendRequest = async (req, res) => {
         if (requester) {
           friendRequestNotification = await Notification.findOne({
             userId: req.user._id,
-            type: 'invitation',
+            type: 'friendRequest',
             content: new RegExp(`${requester.name}.*친구 요청`, 'i'),
             isRead: false
           });
@@ -255,7 +255,7 @@ const respondToFriendRequest = async (req, res) => {
       // 알림 생성 결과를 변수에 저장
       const notification = await Notification.create({
         userId: friendship.requesterId,
-        type: 'invitation',
+        type: 'friendRequestResponse',
         content: `${req.user.name}님이 친구 요청을 수락했습니다.`,
         // 친구 관계 ID 저장
         metadata: {
@@ -281,7 +281,7 @@ const respondToFriendRequest = async (req, res) => {
             content,
             {
               notificationId: notification._id.toString(),
-              type: 'invitation',
+              type: 'friendRequestResponse',
               friendshipId: friendship._id.toString()
             }
           );

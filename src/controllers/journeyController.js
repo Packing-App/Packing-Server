@@ -401,7 +401,7 @@ const respondToInvitation = async (req, res) => {
       const creatorNotification = await Notification.create({
         userId: creator._id,
         journeyId: journey._id,
-        type: 'invitation',
+        type: 'journeyInvitationResponse',
         content: `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`,
         isRead: false
       });
@@ -423,7 +423,7 @@ const respondToInvitation = async (req, res) => {
           {
             notificationId: creatorNotification._id.toString(),
             journeyId: journey._id.toString(),
-            type: 'invitation'
+            type: 'journeyInvitationResponse'
           }
         );
         

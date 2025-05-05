@@ -14,8 +14,10 @@ const notificationSchema = new mongoose.Schema(
     },
     type: { // 알림 타입
       type: String,
-      // reminder: 일정 알림, weather: 날씨 알림, invitation: 초대 알림
-      enum: ['reminder', 'weather', 'invitation'], 
+      // reminder: 일정 알림, weather: 날씨 알림
+      // invitation: 여행 초대 알림, journeyInvitationResponse: 여행 초대 응답 알림
+      // friendRequest: 친구 요청 알림, friendRequestResponse: 친구 요청 응답 알림
+      enum: ['reminder', 'weather', 'invitation', 'journeyInvitationResponse', 'friendRequest', 'friendRequestResponse'], 
       required: true
     },
     content: {  // 알림 내용

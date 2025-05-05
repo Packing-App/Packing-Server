@@ -8,7 +8,6 @@ const User = require('../models/User');
 const logger = require('./logger');
 
 // Google OAuth Strategy
-
 passport.use(
   new GoogleStrategy(
     {
@@ -76,30 +75,62 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Check if user exists
+      // Check if user exists
         let user = await User.findOne({
           socialId: profile.id,
           socialType: 'kakao'
         });
+        // 카카오톡 프로필에서 이름 정보 추출 (수정된 부분)
+        let kakaoName = "카카오 사용자";
+        
+        // 1. properties의 nickname이 있는지 확인 (카카오톡 기본 값)
+        if (profile._json && profile._json.properties && profile._json.properties.nickname) {
+          kakaoName = profile._json.properties.nickname;
+        } 
+        // 2. kakao_account의 profile 정보 확인
+        else if (profile._json && profile._json.kakao_account && profile._json.kakao_account.profile && 
+                profile._json.kakao_account.profile.nickname) {
+          kakaoName = profile._json.kakao_account.profile.nickname;
+        }
+        // 3. displayName 사용
+        else if (profile.displayName) {
+          kakaoName = profile.displayName;
+        }
+        // 4. 기본값에 ID 추가
+        else {
+          kakaoName = `카카오 사용자-${profile.id.toString().substring(0, 4)}`;
+        }
 
-        // If user doesn't exist, create one
+        // 사용자가 존재하지 않는 경우 새로 생성
         if (!user) {
           user = await User.create({
-            name: profile.displayName || profile.username || `User-${profile.id}`,
+            name: kakaoName,
             email: profile._json?.kakao_account?.email || `kakao_${profile.id}@example.com`,
             socialId: profile.id,
             socialType: 'kakao',
-            profileImage: profile._json?.properties?.profile_image || null
+            profileImage: profile._json?.properties?.profile_image || 
+                         (profile._json?.kakao_account?.profile?.profile_image_url) || 
+                         null
           });
+          logger.info(`새 카카오 사용자 생성: ${user.email}, 이름: ${kakaoName}`);
+        } else {
+          // "미연동 계정"인 경우 이름 업데이트
+          if (user.name === "미연동 계정" || !user.name) {
+            user.name = kakaoName;
+            await user.save();
+            logger.info(`카카오 사용자 이름 업데이트: ${user.email}, 새 이름: ${kakaoName}`);
+          }
+          logger.info(`기존 카카오 사용자 발견: ${user.email}, 이름: ${user.name}`);
         }
 
         return done(null, user);
       } catch (error) {
-        logger.error(`Kakao strategy error: ${error.message}`);
+        logger.error(`카카오 전략 오류: ${error.message}`);
         return done(error, null);
       }
     }
   )
+
 );
 
 // Naver OAuth Strategy

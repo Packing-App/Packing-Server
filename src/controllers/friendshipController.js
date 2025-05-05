@@ -137,13 +137,16 @@ const sendFriendRequest = async (req, res) => {
       receiverId: receiver._id,
       status: 'pending'
     });
-
-        
+    
     // 알림 생성
-    await Notification.create({
+    const notification = await Notification.create({
       userId: receiver._id,
       type: 'invitation',
-      content: `${req.user.name}님이 친구 요청을 보냈습니다.`
+      content: `${req.user.name}님이 친구 요청을 보냈습니다.`,
+      // 친구 요청 ID를 메타데이터로 저장하여 나중에 알림 읽음 처리 시 사용
+      metadata: {
+        friendshipId: friendship._id.toString()
+      }
     });
 
     // 소켓을 통한 실시간 알림 전송
@@ -162,7 +165,8 @@ const sendFriendRequest = async (req, res) => {
         content,
         {
           notificationId: notification._id.toString(),
-          type: 'invitation'
+          type: 'invitation',
+          friendshipId: friendship._id.toString() // 친구 요청 ID도 함께 전송
         }
       );
       
@@ -210,13 +214,53 @@ const respondToFriendRequest = async (req, res) => {
     friendship.status = accept ? 'accepted' : 'rejected';
     await friendship.save();
 
-    // 친구 요청 수락 시 알림 생성
+    // 관련 알림 찾기 (친구 요청 관련 알림)
+    try {
+      // 친구 요청과 관련된 알림 찾기 (여러 방법으로 시도)
+      // 1. metadata.friendshipId로 찾기 (새로운 방식)
+      let friendRequestNotification = await Notification.findOne({
+        userId: req.user._id,
+        type: 'invitation',
+        'metadata.friendshipId': friendship._id.toString(),
+        isRead: false
+      });
+      
+      // 2. 메타데이터가 없는 경우, 내용으로 검색 (기존 알림)
+      if (!friendRequestNotification) {
+        // 친구 요청자 정보 가져오기
+        const requester = await User.findById(friendship.requesterId);
+        if (requester) {
+          friendRequestNotification = await Notification.findOne({
+            userId: req.user._id,
+            type: 'invitation',
+            content: new RegExp(`${requester.name}.*친구 요청`, 'i'),
+            isRead: false
+          });
+        }
+      }
+      
+      // 관련 알림을 찾았다면 읽음 처리
+      if (friendRequestNotification) {
+        friendRequestNotification.isRead = true;
+        await friendRequestNotification.save();
+        logger.info(`친구 요청 관련 알림 읽음 처리: ${friendRequestNotification._id}`);
+      }
+    } catch (notificationError) {
+      // 알림 처리 실패는 전체 응답 실패로 이어지지 않도록 로그만 남김
+      logger.error(`친구 요청 관련 알림 처리 오류: ${notificationError.message}`);
+    }
+
+    // 친구 요청 수락 시 상대방에게 알림 생성
     if (accept) {
       // 알림 생성 결과를 변수에 저장
       const notification = await Notification.create({
         userId: friendship.requesterId,
         type: 'invitation',
-        content: `${req.user.name}님이 친구 요청을 수락했습니다.`
+        content: `${req.user.name}님이 친구 요청을 수락했습니다.`,
+        // 친구 관계 ID 저장
+        metadata: {
+          friendshipId: friendship._id.toString()
+        }
       });
 
       // 소켓을 통한 실시간 알림 전송
@@ -237,7 +281,8 @@ const respondToFriendRequest = async (req, res) => {
             content,
             {
               notificationId: notification._id.toString(),
-              type: 'invitation'
+              type: 'invitation',
+              friendshipId: friendship._id.toString()
             }
           );
           

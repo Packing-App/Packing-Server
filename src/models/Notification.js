@@ -30,6 +30,10 @@ const notificationSchema = new mongoose.Schema(
     scheduledAt: { // 예약 시간
       type: Date,
       default: null
+    },
+    metadata: {  // 추가 메타데이터 (친구 요청 ID 등)
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
     }
   },
   {

@@ -99,7 +99,7 @@ const parseCurrentWeather = (data) => {
     clouds: data.clouds.all,
     rain: data.rain ? data.rain['1h'] || data.rain['3h'] || 0 : 0,
     timestamp: new Date(data.dt * 1000),
-    iconUrl: `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`
+    iconUrl: `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`
   };
 };
 
@@ -148,7 +148,7 @@ const findForecastForDate = (data, targetDate) => {
     clouds: closestForecast.clouds.all,
     rain: closestForecast.rain ? closestForecast.rain['3h'] || 0 : 0,
     timestamp: new Date(closestForecast.dt * 1000),
-    iconUrl: `http://openweathermap.org/img/wn/${closestForecast.weather[0].icon}@2x.png`,
+    iconUrl: `https://openweathermap.org/img/wn/${closestForecast.weather[0].icon}@2x.png`,
     isForecast: true // 예보 데이터임을 표시
   };
 

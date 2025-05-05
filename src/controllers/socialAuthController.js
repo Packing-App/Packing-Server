@@ -1,5 +1,6 @@
 // src/controllers/socialAuthController.js
 const User = require('../models/User');
+const axios = require('axios');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');

@@ -200,6 +200,12 @@ const cityTranslations = {
     '아바나': { en: 'Havana', countryCode: 'CU' },
     '암만': { en: 'Amman', countryCode: 'JO' },
     '베이루트': { en: 'Beirut', countryCode: 'LB' },
+
+    '루체른': { en: 'Lucerne', countryCode: 'CH' },
+    '제네바': { en: 'Geneva', countryCode: 'CH' },
+    '인터라켄': { en: 'Interlaken', countryCode: 'CH' },
+    '로잔': { en: 'Lausanne', countryCode: 'CH' },
+    '바젤': { en: 'Basel', countryCode: 'CH' },
   };
   
   module.exports = cityTranslations;

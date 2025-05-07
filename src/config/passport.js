@@ -73,7 +73,7 @@ passport.use(
       clientID: process.env.KAKAO_CLIENT_ID,
       callbackURL: process.env.KAKAO_CALLBACK_URL,
       // 추가: scope 명시
-      scope: ['profile_nickname', 'profile_image', 'account_email']
+      scope: ['profile_nickname', 'profile_image']
     },
     async (accessToken, refreshToken, profile, done) => {
       try {

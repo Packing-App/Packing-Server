@@ -90,7 +90,7 @@ const fetchCitiesByCountryCode = async (countryCode, apiKey) => {
  * @param {number} limit 반환할 결과 수
  * @returns {Array} 검색 결과
  */
-const searchCities = (query, limit = 10) => {
+const searchCities = (query, limit = 30) => {
   if (!query || query.length < 1) {
     return [];
   }

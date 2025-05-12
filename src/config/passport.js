@@ -65,21 +65,21 @@ passport.use(
     }
   )
 );
-
-// 카카오 OAuth
+// 카카오 OAuth - 수정된 버전
 passport.use(
   new KakaoStrategy(
     {
       clientID: process.env.KAKAO_CLIENT_ID,
       callbackURL: process.env.KAKAO_CALLBACK_URL,
-      // 추가: scope 명시
-      scope: ['profile_nickname', 'profile_image']
+      // scope 수정 - 카카오 API v2 기준
+      scope: ['profile_nickname', 'profile_image', 'account_email'],
+      // 추가 설정
+      scopeSeparator: ',',
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         // 디버깅을 위한 프로필 정보 로깅
         logger.info('Kakao Profile Data:', JSON.stringify(profile, null, 2));
-        logger.info('Kakao Access Token:', accessToken);
         
         // 사용자 ID 유효성 검사
         if (!profile.id) {
@@ -93,56 +93,77 @@ passport.use(
           socialType: 'kakao'
         });
 
-        // 카카오톡 프로필에서 이름과 이메일 추출 (개선된 버전)
+        // 카카오톡 프로필에서 정보 추출
         let kakaoName = null;
         let kakaoEmail = null;
         let profileImage = null;
 
-        // 1. 카카오 계정 정보 확인
+        // 카카오 API v2 응답 구조에 맞게 수정
         if (profile._json && profile._json.kakao_account) {
           const kakaoAccount = profile._json.kakao_account;
           
-          // 이메일 추출
-          if (kakaoAccount.email) {
+          // 이메일 추출 - 이메일 검증 상태도 확인
+          if (kakaoAccount.has_email && kakaoAccount.email) {
             kakaoEmail = kakaoAccount.email;
           }
           
-          // 프로필 정보에서 닉네임 추출
-          if (kakaoAccount.profile && kakaoAccount.profile.nickname) {
+          // 프로필 정보 확인 - 닉네임 동의 여부 확인
+          if (kakaoAccount.profile_nickname_needs_agreement === false && 
+              kakaoAccount.profile && 
+              kakaoAccount.profile.nickname) {
             kakaoName = kakaoAccount.profile.nickname;
           }
           
-          // 프로필 이미지 추출
-          if (kakaoAccount.profile && kakaoAccount.profile.profile_image_url) {
-            profileImage = kakaoAccount.profile.profile_image_url;
+          // 프로필 이미지 확인
+          if (kakaoAccount.profile_image_needs_agreement === false && 
+              kakaoAccount.profile && 
+              kakaoAccount.profile.profile_image_url) {
+            profileImage = kakaoAccount.profile.profile_image_url.replace('http://', 'https://');
           }
         }
         
-        // 2. properties에서 정보 추출 (구버전 API 호환)
-        if (!kakaoName && profile._json && profile._json.properties && profile._json.properties.nickname) {
-          kakaoName = profile._json.properties.nickname;
-        }
-        
-        if (!profileImage && profile._json && profile._json.properties && profile._json.properties.profile_image) {
-          profileImage = profile._json.properties.profile_image;
-        }
-        
-        // 3. displayName 사용
+        // displayName으로 대체 시도
         if (!kakaoName && profile.displayName) {
           kakaoName = profile.displayName;
         }
         
-        // 4. 최종 기본값 설정
-        if (!kakaoName) {
-          kakaoName = `카카오사용자${profile.id.toString().substring(0, 6)}`;
+        // properties로 대체 시도 (구 API 호환)
+        if (!kakaoName && profile._json && profile._json.properties) {
+          if (profile._json.properties.nickname) {
+            kakaoName = profile._json.properties.nickname;
+          }
         }
         
+        // 이름이 여전히 없거나 '미연동 계정'인 경우
+        if (!kakaoName || kakaoName === '미연동 계정') {
+          // API를 통해 사용자 정보 재조회 시도
+          try {
+            const userInfoResponse = await axios.get('https://kapi.kakao.com/v2/user/me', {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              }
+            });
+            
+            if (userInfoResponse.data.properties && userInfoResponse.data.properties.nickname) {
+              kakaoName = userInfoResponse.data.properties.nickname;
+            }
+          } catch (apiError) {
+            logger.error('카카오 사용자 정보 API 호출 실패:', apiError);
+          }
+          
+          // 그래도 없으면 기본값 설정
+          if (!kakaoName || kakaoName === '미연동 계정') {
+            kakaoName = `카카오사용자${profile.id.toString().substring(0, 6)}`;
+          }
+        }
+        
+        // 이메일 기본값 설정
         if (!kakaoEmail) {
           kakaoEmail = `kakao_${profile.id}@example.com`;
         }
 
         // 사용자 정보 로깅
-        logger.info(`카카오 정보 추출 결과: 이름=${kakaoName}, 이메일=${kakaoEmail}, 이미지=${profileImage || 'None'}`);
+        logger.info(`카카오 정보 최종 결과: 이름=${kakaoName}, 이메일=${kakaoEmail}, 이미지=${profileImage || 'None'}`);
 
         // 사용자가 존재하지 않는 경우 새로 생성
         if (!user) {
@@ -155,20 +176,31 @@ passport.use(
           });
           logger.info(`새 카카오 사용자 생성: ${user.email}, 이름: ${kakaoName}`);
         } else {
-          // 기존 사용자의 정보 업데이트
-          // "미연동 계정" 또는 이름이 없는 경우 업데이트
-          if (user.name === "미연동 계정" || !user.name) {
+          // 기존 사용자 정보 업데이트
+          let updated = false;
+          
+          // '미연동 계정'이거나 이름이 없는 경우 업데이트
+          if (user.name === '미연동 계정' || !user.name || user.name.startsWith('카카오사용자')) {
             user.name = kakaoName;
-            
-            // 프로필 이미지가 없는 경우에도 업데이트
-            if (!user.profileImage && profileImage) {
-              user.profileImage = profileImage;
-            }
-            
-            await user.save();
-            logger.info(`카카오 사용자 정보 업데이트: ${user.email}, 새 이름: ${kakaoName}`);
+            updated = true;
           }
-          logger.info(`기존 카카오 사용자 로그인: ${user.email}, 이름: ${user.name}`);
+          
+          // 프로필 이미지 업데이트
+          if (!user.profileImage && profileImage) {
+            user.profileImage = profileImage;
+            updated = true;
+          }
+          
+          // HTTP URL을 HTTPS로 변경
+          if (user.profileImage && user.profileImage.startsWith('http://')) {
+            user.profileImage = user.profileImage.replace('http://', 'https://');
+            updated = true;
+          }
+          
+          if (updated) {
+            await user.save();
+            logger.info(`카카오 사용자 정보 업데이트: ${user.email}, 이름: ${user.name}`);
+          }
         }
 
         return done(null, user);

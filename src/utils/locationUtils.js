@@ -1,7 +1,7 @@
 // src/utils/locationUtils.js
 const axios = require('axios');
 const logger = require('../config/logger');
-const cityTranslations = require('../data/cityTranslations');
+const {countryMapping, cityTranslations} = require('../data/cityTranslations');
 
 // 도시 데이터 캐시 (API 호출 결과 저장)
 let citiesCache = null;
@@ -85,7 +85,7 @@ const fetchCitiesByCountryCode = async (countryCode, apiKey) => {
 };
 
 /**
- * 도시명 자동완성 검색
+ * 도시명 자동완성 검색 (한글, 영문, 국가명 모두 지원)
  * @param {string} query 검색어
  * @param {number} limit 반환할 결과 수
  * @returns {Array} 검색 결과
@@ -96,67 +96,102 @@ const searchCities = (query, limit = 10) => {
   }
   
   const results = [];
+  const lowerQuery = query.toLowerCase();
   
-  // 한글 검색어로 한글-영문 매핑 목록에서 검색
-  Object.keys(cityTranslations).forEach(city => {
-    // 대소문자 구분 없이 포함 여부 확인
-    if (city.toLowerCase().includes(query.toLowerCase())) {
+  // 1. 한글 도시명으로 검색
+  Object.keys(cityTranslations).forEach(korCity => {
+    if (korCity.toLowerCase().includes(lowerQuery)) {
       results.push({
-        korName: city,
-        engName: cityTranslations[city].en,
-        countryCode: cityTranslations[city].countryCode
+        korName: korCity,
+        engName: cityTranslations[korCity].en,
+        countryCode: cityTranslations[korCity].countryCode,
+        matchType: 'kor_city'
       });
     }
   });
   
-  // 캐시된 OpenWeatherMap 도시 목록에서도 검색 (영문명)
-  // (실제 구현 시 활용)
+  // 2. 영문 도시명으로 검색
+  Object.keys(cityTranslations).forEach(korCity => {
+    const engCity = cityTranslations[korCity].en;
+    if (engCity.toLowerCase().includes(lowerQuery)) {
+      // 한글로 이미 찾은 도시는 제외 (중복 방지)
+      const alreadyFound = results.some(r => r.korName === korCity);
+      if (!alreadyFound) {
+        results.push({
+          korName: korCity,
+          engName: engCity,
+          countryCode: cityTranslations[korCity].countryCode,
+          matchType: 'eng_city'
+        });
+      }
+    }
+  });
   
-  // 결과 정렬 (정확도 순)
-  results.sort((a, b) => {
-    // 검색어로 시작하는 도시를 우선 정렬
-    const aStartsWith = a.korName.toLowerCase().startsWith(query.toLowerCase());
-    const bStartsWith = b.korName.toLowerCase().startsWith(query.toLowerCase());
+  // 3. 국가명으로 검색 (한글 및 영문)
+  Object.keys(countryMapping).forEach(countryCode => {
+    const country = countryMapping[countryCode];
     
-    if (aStartsWith && !bStartsWith) return -1;
-    if (!aStartsWith && bStartsWith) return 1;
+    // 한글 국가명으로 검색
+    if (country.ko.toLowerCase().includes(lowerQuery) ||
+        // 영문 국가명으로 검색
+        country.en.toLowerCase().includes(lowerQuery) ||
+        // 국가 코드로 검색
+        countryCode.toLowerCase().includes(lowerQuery)) {
+      
+      // 해당 국가의 모든 도시 찾기
+      Object.keys(cityTranslations).forEach(korCity => {
+        if (cityTranslations[korCity].countryCode === countryCode) {
+          // 이미 찾은 도시는 제외
+          const alreadyFound = results.some(r => r.korName === korCity);
+          if (!alreadyFound) {
+            results.push({
+              korName: korCity,
+              engName: cityTranslations[korCity].en,
+              countryCode: countryCode,
+              matchType: 'country',
+              // 추가 정보로 국가명도 포함
+              countryNameKo: country.ko,
+              countryNameEn: country.en
+            });
+          }
+        }
+      });
+    }
+  });
+  
+  // 결과 정렬 (검색 정확도 순)
+  results.sort((a, b) => {
+    // 도시명 직접 매칭을 우선시
+    if (a.matchType !== b.matchType) {
+      if (a.matchType === 'kor_city' || a.matchType === 'eng_city') return -1;
+      if (b.matchType === 'kor_city' || b.matchType === 'eng_city') return 1;
+    }
+    
+    // 검색어로 시작하는 도시를 우선 정렬
+    const aKorStartsWith = a.korName.toLowerCase().startsWith(lowerQuery);
+    const bKorStartsWith = b.korName.toLowerCase().startsWith(lowerQuery);
+    const aEngStartsWith = a.engName.toLowerCase().startsWith(lowerQuery);
+    const bEngStartsWith = b.engName.toLowerCase().startsWith(lowerQuery);
+    
+    if ((aKorStartsWith || aEngStartsWith) && !(bKorStartsWith || bEngStartsWith)) return -1;
+    if (!(aKorStartsWith || aEngStartsWith) && (bKorStartsWith || bEngStartsWith)) return 1;
     
     // 이름 길이가 짧은 순서로 정렬
     return a.korName.length - b.korName.length;
   });
   
+  // matchType 필드 제거 (클라이언트에 노출하지 않음)
+  const cleanResults = results.map(result => {
+    const { matchType, ...cleanResult } = result;
+    return cleanResult;
+  });
+  
   // limit 개수만큼 반환
-  return results.slice(0, limit);
-};
-
-/**
- * 영문 도시명으로 도시 정보 검색
- * @param {string} engName 영문 도시명
- * @returns {Object|null} 도시 정보
- */
-const findCityByEngName = (engName) => {
-  if (!engName) return null;
-  
-  // 소문자로 변환하여 비교
-  const lowerName = engName.toLowerCase();
-  
-  // 한글-영문 매핑에서 검색
-  for (const korName in cityTranslations) {
-    if (cityTranslations[korName].en.toLowerCase() === lowerName) {
-      return {
-        korName,
-        engName: cityTranslations[korName].en,
-        countryCode: cityTranslations[korName].countryCode
-      };
-    }
-  }
-  
-  return null;
+  return cleanResults.slice(0, limit);
 };
 
 module.exports = {
   translateCityName,
   initCityList,
-  searchCities,
-  findCityByEngName
+  searchCities
 };

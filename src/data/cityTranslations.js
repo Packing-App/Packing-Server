@@ -95,7 +95,6 @@ const cityTranslations = {
     '산티아고': { en: 'Santiago', countryCode: 'CL' },
     '카라카스': { en: 'Caracas', countryCode: 'VE' },
     '보고타': { en: 'Bogota', countryCode: 'CO' },
-    '카이로': { en: 'Cairo', countryCode: 'EG' },
     '모스크바': { en: 'Moscow', countryCode: 'RU' },
     '키예프': { en: 'Kyiv', countryCode: 'UA' },
     '민스크': { en: 'Minsk', countryCode: 'BY' },
@@ -190,7 +189,6 @@ const cityTranslations = {
     '카이로': { en: 'Cairo', countryCode: 'EG' },
     '라고스': { en: 'Lagos', countryCode: 'NG' },
     '카사블랑카': { en: 'Casablanca', countryCode: 'MA' },
-    '브리즈번': { en: 'Brisbane', countryCode: 'AU' },
     '골드코스트': { en: 'Gold Coast', countryCode: 'AU' },
     '크라이스트처치': { en: 'Christchurch', countryCode: 'NZ' },
     '리우데자네이루': { en: 'Rio de Janeiro', countryCode: 'BR' },
@@ -250,7 +248,7 @@ const cityTranslations = {
     '말라가': { en: 'Málaga', countryCode: 'ES' },
     '빌바오': { en: 'Bilbao', countryCode: 'ES' },
     '사라고사': { en: 'Zaragoza', countryCode: 'ES' },
-    '코르도바': { en: 'Córdoba', countryCode: 'ES' },
+    '코르도바(아르헨티나)': { en: 'Córdoba', countryCode: 'AR' },
     
     // 포르투갈
     '포르투': { en: 'Porto', countryCode: 'PT' },
@@ -357,7 +355,6 @@ const cityTranslations = {
     '뉴올리언스': { en: 'New Orleans', countryCode: 'US' },
     '내슈빌': { en: 'Nashville', countryCode: 'US' },
     '미니애폴리스': { en: 'Minneapolis', countryCode: 'US' },
-    '시애틀': { en: 'Seattle', countryCode: 'US' },
     '피츠버그': { en: 'Pittsburgh', countryCode: 'US' },
     '신시내티': { en: 'Cincinnati', countryCode: 'US' },
     '올랜도': { en: 'Orlando', countryCode: 'US' },
@@ -371,7 +368,7 @@ const cityTranslations = {
     '위니펙': { en: 'Winnipeg', countryCode: 'CA' },
     '퀘벡시티': { en: 'Quebec City', countryCode: 'CA' },
     '해밀턴': { en: 'Hamilton', countryCode: 'CA' },
-    '빅토리아': { en: 'Victoria', countryCode: 'CA' },
+    '빅토리아(캐나다)': { en: 'Victoria', countryCode: 'CA' },
     
     // === 아시아 ===
     // 중국
@@ -399,7 +396,6 @@ const cityTranslations = {
     '가와사키': { en: 'Kawasaki', countryCode: 'JP' },
     '나가노': { en: 'Nagano', countryCode: 'JP' },
     '오카야마': { en: 'Okayama', countryCode: 'JP' },
-    '나가노': { en: 'Nagano', countryCode: 'JP' },
     '타카마츠': { en: 'Takamatsu', countryCode: 'JP' },
     '마츠야마': { en: 'Matsuyama', countryCode: 'JP' },
     '토야마': { en: 'Toyama', countryCode: 'JP' },
@@ -520,7 +516,7 @@ const cityTranslations = {
     '비사우': { en: 'Bissau', countryCode: 'GW' },
     '안타나나리보': { en: 'Antananarivo', countryCode: 'MG' },
     '포트루이스': { en: 'Port Louis', countryCode: 'MU' },
-    '빅토리아': { en: 'Victoria', countryCode: 'SC' },
+    '빅토리아(세이셸)': { en: 'Victoria', countryCode: 'SC' },
     
     // === 남미 ===
     '브라질리아': { en: 'Brasília', countryCode: 'BR' },
@@ -533,7 +529,7 @@ const cityTranslations = {
     '마나우스': { en: 'Manaus', countryCode: 'BR' },
     '벨렘': { en: 'Belém', countryCode: 'BR' },
     '플로리아노폴리스': { en: 'Florianópolis', countryCode: 'BR' },
-    '코르도바': { en: 'Córdoba', countryCode: 'AR' },
+    '코르도바(스페인)': { en: 'Córdoba', countryCode: 'ES' },
     '로사리오': { en: 'Rosario', countryCode: 'AR' },
     '멘도사': { en: 'Mendoza', countryCode: 'AR' },
     '마르델플라타': { en: 'Mar del Plata', countryCode: 'AR' },

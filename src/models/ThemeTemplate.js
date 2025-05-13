@@ -7,7 +7,12 @@ const themeTemplateSchema = new mongoose.Schema(
       required: [true, '테마 이름을 입력해주세요'],
       unique: true,
       enum: ['waterSports', 'cycling', 'camping', 'picnic',
-        'mountain', 'skiing', 'fishing', 'shopping', 'themepark','other'
+        'mountain', 'skiing', 'fishing', 'shopping', 'themepark',
+        'business', 'beach', 'cultural', 'photography', 'family',
+        'backpacking', 'wellness', 'safari', 'cruise', 'desert',
+        'sports', 'roadtrip', 'study', 'glamping', 'medical',
+        'adventure', 'diving', 'music', 'wine', 'urban', 'island',
+        'other'
       ]
     },
     items: [{   // 준비물 목록

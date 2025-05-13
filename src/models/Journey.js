@@ -42,13 +42,18 @@ const journeySchema = new mongoose.Schema(
       type: Date,
       required: [true, '종료 날짜를 입력해주세요']
     },
-    theme: { // 여행 테마
+    themes: [{ // 여행 테마 (복수 선택 가능)
       type: String,
       required: [true, '여행 테마를 선택해주세요'],
       enum: ['waterSports', 'cycling', 'camping', 'picnic',
-        'mountain', 'skiing', 'fishing', 'shopping', 'themepark','other'
+        'mountain', 'skiing', 'fishing', 'shopping', 'themepark',
+        'business', 'beach', 'cultural', 'photography', 'family',
+        'backpacking', 'wellness', 'safari', 'cruise', 'desert',
+        'sports', 'roadtrip', 'study', 'glamping', 'medical',
+        'adventure', 'diving', 'music', 'wine', 'urban', 'island',
+        'other'
       ]
-    },
+    }],
     imageUrl: { // 대표 이미지 URL
       type: String,
       default: null
@@ -71,6 +76,14 @@ const journeySchema = new mongoose.Schema(
 journeySchema.pre('save', function(next) {
   if (this.isNew && !this.participants.includes(this.creatorId)) {
     this.participants.push(this.creatorId);
+  }
+  next();
+});
+
+// 최소 1개 이상의 테마 선택 필수
+journeySchema.pre('save', function(next) {
+  if (this.themes && this.themes.length === 0) {
+    return next(new Error('최소 1개 이상의 테마를 선택해주세요'));
   }
   next();
 });

@@ -10,8 +10,8 @@ const logger = require('../config/logger');
  */
 const getRecommendedItems = async (journey) => {
   try {
-    // 1. 테마 기반 기본 준비물 가져오기
-    const themeItems = await getThemeBasedItems(journey.theme);
+    // 1. 테마 기반 기본 준비물 가져오기 (다중 테마 지원)
+    const themeItems = await getThemeBasedItems(journey.themes);
     
     // 2. 날씨 기반 준비물 가져오기
     const weatherItems = await getWeatherBasedItems(journey.destination, journey.startDate);
@@ -22,19 +22,11 @@ const getRecommendedItems = async (journey) => {
     // 4. 교통 수단 기반 준비물
     const transportItems = getTransportBasedItems(journey.transportType);
     
-    // 5. 모든 준비물 통합 (중복 제거)
+    // 5. 모든 준비물 통합
     const allItems = [...themeItems, ...weatherItems, ...durationItems, ...transportItems];
     
-    // 중복 제거 (이름 기준)
-    const uniqueItems = [];
-    const itemNames = new Set();
-    
-    allItems.forEach(item => {
-      if (!itemNames.has(item.name)) {
-        itemNames.add(item.name);
-        uniqueItems.push(item);
-      }
-    });
+    // 6. 중복 제거 및 우선순위 병합
+    const uniqueItems = mergeDuplicateItems(allItems);
     
     return uniqueItems;
   } catch (error) {
@@ -44,18 +36,61 @@ const getRecommendedItems = async (journey) => {
 };
 
 /**
- * 테마 기반 준비물 가져오기
+ * 중복 아이템 병합 및 우선순위 처리
+ * @param {Array} items 전체 아이템 목록
+ * @returns {Array} 중복 제거된 아이템 목록
  */
-const getThemeBasedItems = async (theme) => {
-  try {
-    const themeTemplate = await ThemeTemplate.findOne({ themeName: theme });
+const mergeDuplicateItems = (items) => {
+  const itemMap = new Map();
+  
+  items.forEach(item => {
+    const key = item.name;
     
-    if (!themeTemplate) {
-      logger.warn(`${theme} 테마의 템플릿을 찾을 수 없습니다.`);
+    if (itemMap.has(key)) {
+      const existingItem = itemMap.get(key);
+      // isEssential이 true인 것을 우선
+      if (item.isEssential && !existingItem.isEssential) {
+        itemMap.set(key, item);
+      }
+      // count가 있는 경우 큰 값으로 업데이트
+      if (item.count && existingItem.count) {
+        existingItem.count = Math.max(existingItem.count, item.count);
+      } else if (item.count) {
+        existingItem.count = item.count;
+      }
+    } else {
+      itemMap.set(key, { ...item });
+    }
+  });
+  
+  return Array.from(itemMap.values());
+};
+
+/**
+ * 테마 기반 준비물 가져오기 (다중 테마 지원)
+ */
+const getThemeBasedItems = async (themes) => {
+  try {
+    if (!themes || themes.length === 0) {
+      logger.warn('테마가 지정되지 않았습니다.');
       return [];
     }
     
-    return themeTemplate.items;
+    const allThemeItems = [];
+    
+    // 각 테마별로 준비물 가져오기
+    for (const theme of themes) {
+      const themeTemplate = await ThemeTemplate.findOne({ themeName: theme });
+      
+      if (!themeTemplate) {
+        logger.warn(`${theme} 테마의 템플릿을 찾을 수 없습니다.`);
+        continue;
+      }
+      
+      allThemeItems.push(...themeTemplate.items);
+    }
+    
+    return allThemeItems;
   } catch (error) {
     logger.error(`테마 기반 준비물 조회 오류: ${error.message}`);
     return [];

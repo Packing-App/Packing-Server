@@ -184,6 +184,364 @@ const themeTemplateData = [
       { name: '지도/가이드북', category: 'documents', isEssential: false },
       { name: '이어폰/헤드폰', category: 'electronics', isEssential: false }
     ]
+  },
+  // 신규 테마
+  {
+    themeName: 'business',
+    items: [
+      { name: '정장/비즈니스 캐주얼', category: 'clothing', isEssential: true },
+      { name: '드레스 셔츠/블라우스', category: 'clothing', isEssential: true },
+      { name: '넥타이/스카프', category: 'clothing', isEssential: false },
+      { name: '구두', category: 'clothing', isEssential: true },
+      { name: '노트북', category: 'electronics', isEssential: true },
+      { name: '명함', category: 'documents', isEssential: true },
+      { name: '서류 가방', category: 'essentials', isEssential: true },
+      { name: '충전기/어댑터', category: 'electronics', isEssential: true },
+      { name: '프레젠테이션 자료', category: 'documents', isEssential: true },
+      { name: '명함 지갑', category: 'essentials', isEssential: false },
+      { name: '노트/펜', category: 'essentials', isEssential: true },
+      { name: '휴대용 다리미', category: 'electronics', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'beach',
+    items: [
+      { name: '수영복', category: 'clothing', isEssential: true },
+      { name: '비치웨어', category: 'clothing', isEssential: true },
+      { name: '샌들/슬리퍼', category: 'clothing', isEssential: true },
+      { name: '비치 타올', category: 'essentials', isEssential: true },
+      { name: '비치백', category: 'essentials', isEssential: true },
+      { name: '파라솔', category: 'essentials', isEssential: false },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '선글라스', category: 'essentials', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: true },
+      { name: '보습 스프레이', category: 'toiletries', isEssential: false },
+      { name: '방수 파우치', category: 'essentials', isEssential: false },
+      { name: '쿨러백', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'cultural',
+    items: [
+      { name: '편안한 운동화', category: 'clothing', isEssential: true },
+      { name: '카메라', category: 'electronics', isEssential: true },
+      { name: '가이드북', category: 'documents', isEssential: true },
+      { name: '메모장/펜', category: 'essentials', isEssential: true },
+      { name: '박물관 패스', category: 'documents', isEssential: false },
+      { name: '경량 배낭', category: 'essentials', isEssential: true },
+      { name: '충전기', category: 'electronics', isEssential: true },
+      { name: '긴팔 옷', category: 'clothing', isEssential: true },
+      { name: '스카프', category: 'clothing', isEssential: false },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '간식', category: 'essentials', isEssential: false },
+      { name: '지도', category: 'documents', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'photography',
+    items: [
+      { name: 'DSLR/미러리스 카메라', category: 'electronics', isEssential: true },
+      { name: '여분 렌즈', category: 'electronics', isEssential: true },
+      { name: '삼각대', category: 'electronics', isEssential: true },
+      { name: '여분 배터리', category: 'electronics', isEssential: true },
+      { name: '메모리카드', category: 'electronics', isEssential: true },
+      { name: '렌즈 청소 도구', category: 'electronics', isEssential: true },
+      { name: '카메라 가방', category: 'essentials', isEssential: true },
+      { name: '필터', category: 'electronics', isEssential: false },
+      { name: '반사판', category: 'electronics', isEssential: false },
+      { name: '노트북/태블릿', category: 'electronics', isEssential: false },
+      { name: '외장하드', category: 'electronics', isEssential: false },
+      { name: '충전기', category: 'electronics', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'family',
+    items: [
+      { name: '아이 옷 여벌', category: 'clothing', isEssential: true },
+      { name: '기저귀', category: 'essentials', isEssential: true },
+      { name: '물티슈', category: 'toiletries', isEssential: true },
+      { name: '젖병/이유식', category: 'essentials', isEssential: true },
+      { name: '아이 간식', category: 'essentials', isEssential: true },
+      { name: '장난감', category: 'essentials', isEssential: true },
+      { name: '유모차', category: 'essentials', isEssential: false },
+      { name: '카시트', category: 'essentials', isEssential: false },
+      { name: '아이 약품', category: 'medicines', isEssential: true },
+      { name: '아이 선크림', category: 'toiletries', isEssential: true },
+      { name: '아이 수영복', category: 'clothing', isEssential: false },
+      { name: '보온병', category: 'essentials', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'backpacking',
+    items: [
+      { name: '배낭', category: 'essentials', isEssential: true },
+      { name: '여행용 수건', category: 'essentials', isEssential: true },
+      { name: '세탁 세제', category: 'toiletries', isEssential: true },
+      { name: '자물쇠', category: 'essentials', isEssential: true },
+      { name: '슬리퍼', category: 'clothing', isEssential: true },
+      { name: '압축 팩', category: 'essentials', isEssential: true },
+      { name: '여권 파우치', category: 'essentials', isEssential: true },
+      { name: '멀티탭', category: 'electronics', isEssential: true },
+      { name: '유스호스텔 카드', category: 'documents', isEssential: false },
+      { name: '침낭 라이너', category: 'essentials', isEssential: false },
+      { name: '여행용 베개', category: 'essentials', isEssential: false },
+      { name: '귀마개', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'wellness',
+    items: [
+      { name: '요가 매트', category: 'essentials', isEssential: true },
+      { name: '운동복', category: 'clothing', isEssential: true },
+      { name: '슬리퍼', category: 'clothing', isEssential: true },
+      { name: '목욕 가운', category: 'clothing', isEssential: false },
+      { name: '마사지 오일', category: 'toiletries', isEssential: false },
+      { name: '아로마 오일', category: 'toiletries', isEssential: false },
+      { name: '명상 앱', category: 'electronics', isEssential: false },
+      { name: '이어폰', category: 'electronics', isEssential: true },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '건강 간식', category: 'essentials', isEssential: false },
+      { name: '선글라스', category: 'essentials', isEssential: false },
+      { name: '편한 옷', category: 'clothing', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'safari',
+    items: [
+      { name: '쌍안경', category: 'essentials', isEssential: true },
+      { name: '카키색 옷', category: 'clothing', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: true },
+      { name: '방충제', category: 'toiletries', isEssential: true },
+      { name: '자외선 차단제', category: 'toiletries', isEssential: true },
+      { name: '카메라', category: 'electronics', isEssential: true },
+      { name: '망원렌즈', category: 'electronics', isEssential: false },
+      { name: '먼지 방지 커버', category: 'essentials', isEssential: false },
+      { name: '부츠', category: 'clothing', isEssential: true },
+      { name: '긴팔/긴바지', category: 'clothing', isEssential: true },
+      { name: '손전등', category: 'essentials', isEssential: true },
+      { name: '물병', category: 'essentials', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'cruise',
+    items: [
+      { name: '정장/칵테일 드레스', category: 'clothing', isEssential: true },
+      { name: '캐주얼 의류', category: 'clothing', isEssential: true },
+      { name: '수영복', category: 'clothing', isEssential: true },
+      { name: '운동화', category: 'clothing', isEssential: true },
+      { name: '구두', category: 'clothing', isEssential: true },
+      { name: '멀미약', category: 'medicines', isEssential: true },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: true },
+      { name: '선글라스', category: 'essentials', isEssential: true },
+      { name: '가벼운 재킷', category: 'clothing', isEssential: true },
+      { name: '비치타올', category: 'essentials', isEssential: false },
+      { name: '방수 가방', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'desert',
+    items: [
+      { name: '스카프/터번', category: 'clothing', isEssential: true },
+      { name: '긴팔 셔츠', category: 'clothing', isEssential: true },
+      { name: '긴바지', category: 'clothing', isEssential: true },
+      { name: '선글라스', category: 'essentials', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: true },
+      { name: '튼튼한 신발', category: 'clothing', isEssential: true },
+      { name: '물병(대용량)', category: 'essentials', isEssential: true },
+      { name: '전해질 보충제', category: 'medicines', isEssential: true },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '립밤', category: 'toiletries', isEssential: true },
+      { name: '모래 방지 커버', category: 'essentials', isEssential: false },
+      { name: '야간용 재킷', category: 'clothing', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'sports',
+    items: [
+      { name: '팀 유니폼', category: 'clothing', isEssential: true },
+      { name: '운동화', category: 'clothing', isEssential: true },
+      { name: '응원 도구', category: 'essentials', isEssential: false },
+      { name: '방석', category: 'essentials', isEssential: false },
+      { name: '우비', category: 'clothing', isEssential: false },
+      { name: '쌍안경', category: 'essentials', isEssential: false },
+      { name: '캡모자', category: 'clothing', isEssential: true },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '간식', category: 'essentials', isEssential: false },
+      { name: '카메라', category: 'electronics', isEssential: false },
+      { name: '현금', category: 'essentials', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'roadtrip',
+    items: [
+      { name: '차량용 충전기', category: 'electronics', isEssential: true },
+      { name: '네비게이션', category: 'electronics', isEssential: true },
+      { name: '음악 플레이리스트', category: 'essentials', isEssential: false },
+      { name: '쿨러/아이스박스', category: 'essentials', isEssential: true },
+      { name: '담요', category: 'essentials', isEssential: false },
+      { name: '베개', category: 'essentials', isEssential: false },
+      { name: '간식', category: 'essentials', isEssential: true },
+      { name: '물티슈', category: 'toiletries', isEssential: true },
+      { name: '휴지', category: 'toiletries', isEssential: true },
+      { name: '구급상자', category: 'medicines', isEssential: true },
+      { name: '차량 정비 도구', category: 'essentials', isEssential: false },
+      { name: '주차 동전', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'study',
+    items: [
+      { name: '노트북', category: 'electronics', isEssential: true },
+      { name: '교재', category: 'essentials', isEssential: true },
+      { name: '사전', category: 'essentials', isEssential: true },
+      { name: '필기구', category: 'essentials', isEssential: true },
+      { name: '노트', category: 'essentials', isEssential: true },
+      { name: '유학생 비자', category: 'documents', isEssential: true },
+      { name: '증명사진', category: 'documents', isEssential: true },
+      { name: '변압기', category: 'electronics', isEssential: true },
+      { name: '장기체류 의류', category: 'clothing', isEssential: true },
+      { name: '세탁용품', category: 'toiletries', isEssential: true },
+      { name: '조리도구', category: 'essentials', isEssential: false },
+      { name: '침구', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'glamping',
+    items: [
+      { name: '가벼운 침구', category: 'essentials', isEssential: false },
+      { name: '와인/와인잔', category: 'essentials', isEssential: false },
+      { name: '블루투스 스피커', category: 'electronics', isEssential: false },
+      { name: '분위기 조명', category: 'electronics', isEssential: false },
+      { name: '보드게임', category: 'essentials', isEssential: false },
+      { name: '바비큐 도구', category: 'essentials', isEssential: false },
+      { name: '쿨러', category: 'essentials', isEssential: true },
+      { name: '편한 옷', category: 'clothing', isEssential: true },
+      { name: '슬리퍼', category: 'clothing', isEssential: true },
+      { name: '카메라', category: 'electronics', isEssential: false },
+      { name: '간식', category: 'essentials', isEssential: true },
+      { name: '음료', category: 'essentials', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'medical',
+    items: [
+      { name: '의료 기록', category: 'documents', isEssential: true },
+      { name: '처방전', category: 'documents', isEssential: true },
+      { name: '보험 서류', category: 'documents', isEssential: true },
+      { name: '편한 옷', category: 'clothing', isEssential: true },
+      { name: '슬리퍼', category: 'clothing', isEssential: true },
+      { name: '회복용 베개', category: 'essentials', isEssential: false },
+      { name: '약품', category: 'medicines', isEssential: true },
+      { name: '붕대/거즈', category: 'medicines', isEssential: false },
+      { name: '체온계', category: 'medicines', isEssential: false },
+      { name: '혈압계', category: 'medicines', isEssential: false },
+      { name: '동반자 연락처', category: 'documents', isEssential: true },
+      { name: '통역 앱', category: 'electronics', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'adventure',
+    items: [
+      { name: '액션캠', category: 'electronics', isEssential: true },
+      { name: '헬멧', category: 'essentials', isEssential: true },
+      { name: '보호대', category: 'essentials', isEssential: true },
+      { name: '스포츠 의류', category: 'clothing', isEssential: true },
+      { name: '튼튼한 신발', category: 'clothing', isEssential: true },
+      { name: '응급 키트', category: 'medicines', isEssential: true },
+      { name: '방수 가방', category: 'essentials', isEssential: true },
+      { name: '에너지바', category: 'essentials', isEssential: true },
+      { name: '전해질 음료', category: 'essentials', isEssential: true },
+      { name: '로프', category: 'essentials', isEssential: false },
+      { name: '손전등', category: 'essentials', isEssential: true },
+      { name: '호루라기', category: 'essentials', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'diving',
+    items: [
+      { name: '다이빙 자격증', category: 'documents', isEssential: true },
+      { name: '다이빙 로그북', category: 'documents', isEssential: true },
+      { name: '수영복', category: 'clothing', isEssential: true },
+      { name: '래시가드', category: 'clothing', isEssential: true },
+      { name: '다이빙 마스크', category: 'essentials', isEssential: true },
+      { name: '스노클', category: 'essentials', isEssential: false },
+      { name: '핀', category: 'essentials', isEssential: true },
+      { name: '수중 카메라', category: 'electronics', isEssential: false },
+      { name: '방수 가방', category: 'essentials', isEssential: true },
+      { name: '타올', category: 'essentials', isEssential: true },
+      { name: '이퀄라이징 약', category: 'medicines', isEssential: false },
+      { name: '선크림', category: 'toiletries', isEssential: true }
+    ]
+  },
+  {
+    themeName: 'music',
+    items: [
+      { name: '티켓', category: 'documents', isEssential: true },
+      { name: '귀마개', category: 'essentials', isEssential: true },
+      { name: '일회용 우비', category: 'clothing', isEssential: false },
+      { name: '휴대용 의자', category: 'essentials', isEssential: false },
+      { name: '배터리 팩', category: 'electronics', isEssential: true },
+      { name: '현금', category: 'essentials', isEssential: true },
+      { name: '작은 가방', category: 'essentials', isEssential: true },
+      { name: '편한 신발', category: 'clothing', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: false },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '간식', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'wine',
+    items: [
+      { name: '와인 오프너', category: 'essentials', isEssential: true },
+      { name: '와인 스토퍼', category: 'essentials', isEssential: false },
+      { name: '시음 노트', category: 'essentials', isEssential: false },
+      { name: '편한 신발', category: 'clothing', isEssential: true },
+      { name: '간단한 크래커', category: 'essentials', isEssential: false },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '카메라', category: 'electronics', isEssential: false },
+      { name: '가벼운 재킷', category: 'clothing', isEssential: false },
+      { name: '선글라스', category: 'essentials', isEssential: false },
+      { name: '모자', category: 'clothing', isEssential: false },
+      { name: '작은 쿨러백', category: 'essentials', isEssential: false },
+      { name: '와인 가방', category: 'essentials', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'urban',
+    items: [
+      { name: '시티투어 패스', category: 'documents', isEssential: false },
+      { name: '편한 운동화', category: 'clothing', isEssential: true },
+      { name: '도시 지도', category: 'documents', isEssential: false },
+      { name: '대중교통 카드', category: 'essentials', isEssential: true },
+      { name: '경량 배낭', category: 'essentials', isEssential: true },
+      { name: '카메라', category: 'electronics', isEssential: false },
+      { name: '충전기', category: 'electronics', isEssential: true },
+      { name: '우산', category: 'essentials', isEssential: false },
+      { name: '가벼운 재킷', category: 'clothing', isEssential: false },
+      { name: '물병', category: 'essentials', isEssential: true },
+      { name: '간식', category: 'essentials', isEssential: false },
+      { name: '가이드북', category: 'documents', isEssential: false }
+    ]
+  },
+  {
+    themeName: 'island',
+    items: [
+      { name: '선박 티켓', category: 'documents', isEssential: true },
+      { name: '멀미약', category: 'medicines', isEssential: true },
+      { name: '수영복', category: 'clothing', isEssential: true },
+      { name: '비치타올', category: 'essentials', isEssential: true },
+      { name: '샌들', category: 'clothing', isEssential: true },
+      { name: '방수 가방', category: 'essentials', isEssential: true },
+      { name: '선크림', category: 'toiletries', isEssential: true },
+      { name: '모기약', category: 'medicines', isEssential: true },
+      { name: '모자', category: 'clothing', isEssential: true },
+      { name: '선글라스', category: 'essentials', isEssential: true },
+      { name: '간단한 약품', category: 'medicines', isEssential: true },
+      { name: '현금', category: 'essentials', isEssential: true }
+    ]
   }
 ];
 

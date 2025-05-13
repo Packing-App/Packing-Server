@@ -71,13 +71,18 @@ const createJourney = async (req, res) => {
       destination, 
       startDate, 
       endDate, 
-      theme, 
+      themes, // 변경: theme -> themes (배열)
       isPrivate = false 
     } = req.body;
 
     // 필수 필드 검증
-    if (!title || !transportType || !origin || !destination || !startDate || !endDate || !theme) {
+    if (!title || !transportType || !origin || !destination || !startDate || !endDate || !themes) {
       return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    }
+
+    // 테마 배열 검증
+    if (!Array.isArray(themes) || themes.length === 0) {
+      return sendError(res, 400, '최소 1개 이상의 테마를 선택해주세요');
     }
 
     // 날짜 검증
@@ -87,7 +92,9 @@ const createJourney = async (req, res) => {
     if (end < start) {
       return sendError(res, 400, '종료 날짜는 시작 날짜 이후여야 합니다');
     }
-    const imageData = await getDestinationImage(destination, theme);
+    
+    // 첫 번째 테마를 이미지 검색에 사용
+    const imageData = await getDestinationImage(destination, themes[0]);
 
     // 새 여행 생성
     const journey = await Journey.create({
@@ -97,7 +104,7 @@ const createJourney = async (req, res) => {
       destination,
       startDate: start,
       endDate: end,
-      theme,
+      themes, // 복수 테마 지원
       isPrivate,
       creatorId: req.user._id,
       participants: [req.user._id], // 생성자를 참가자로 자동 추가
@@ -132,16 +139,25 @@ const updateJourney = async (req, res) => {
       return sendError(res, 403, '여행 정보를 수정할 권한이 없습니다');
     }
 
-    const { 
+    const {
       title, 
       transportType, 
       origin, 
       destination, 
       startDate, 
       endDate, 
-      theme, 
+      themes, // 변경: theme -> themes (배열)
       isPrivate 
     } = req.body;
+
+    // 필수 필드 검증
+    if (!title || !transportType || !origin || !destination || !startDate || !endDate || !themes) {
+      return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    }
+    // 테마 배열 검증
+    if (!Array.isArray(themes) || themes.length === 0) {
+      return sendError(res, 400, '최소 1개 이상의 테마를 선택해주세요');
+    }
 
     // 날짜 검증
     if (startDate && endDate) {
@@ -160,7 +176,7 @@ const updateJourney = async (req, res) => {
     if (destination) journey.destination = destination;
     if (startDate) journey.startDate = new Date(startDate);
     if (endDate) journey.endDate = new Date(endDate);
-    if (theme) journey.theme = theme;
+    if (themes) journey.themes = themes;
     if (isPrivate !== undefined) journey.isPrivate = isPrivate;
 
     // 저장

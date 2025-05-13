@@ -71,6 +71,11 @@ const mergeDuplicateItems = (items) => {
  */
 const getThemeBasedItems = async (themes) => {
   try {
+    // 단일 테마인 경우 (기존 코드 호환성)
+    if (typeof themes === 'string') {
+      themes = [themes];
+    }
+    
     if (!themes || themes.length === 0) {
       logger.warn('테마가 지정되지 않았습니다.');
       return [];

@@ -159,7 +159,6 @@ const themeTemplateData = [
       { name: '선크림', category: 'toiletries', isEssential: true },
       { name: '간식', category: 'essentials', isEssential: false },
       { name: '비상약', category: 'medicines', isEssential: false },
-      { name: '우비/판초', category: 'clothing', isEssential: false },
       { name: '물티슈', category: 'toiletries', isEssential: true },
       { name: '휴대용 선풍기', category: 'electronics', isEssential: false },
       { name: '카메라', category: 'electronics', isEssential: false },

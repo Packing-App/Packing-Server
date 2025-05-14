@@ -135,6 +135,7 @@ const mergeDuplicateItems = (items) => {
 /**
  * 테마 기반 준비물 가져오기 (다중 테마 지원)
  */
+// getThemeBasedItems 함수 수정 - Mongoose 문서를 plain object로 변환
 const getThemeBasedItems = async (themes) => {
   try {
     // 단일 테마인 경우 (기존 코드 호환성)
@@ -151,19 +152,25 @@ const getThemeBasedItems = async (themes) => {
     
     // 각 테마별로 준비물 가져오기
     for (const theme of themes) {
-      const themeTemplate = await ThemeTemplate.findOne({ themeName: theme });
+      // .lean() 옵션을 사용하여 plain object로 가져오기
+      const themeTemplate = await ThemeTemplate.findOne({ themeName: theme }).lean();
       
       if (!themeTemplate) {
         logger.warn(`${theme} 테마의 템플릿을 찾을 수 없습니다.`);
         continue;
       }
       
+      logger.info(`${theme} 테마에서 ${themeTemplate.items.length}개 아이템 로드`);
+      
+      // plain object이므로 바로 사용 가능
       allThemeItems.push(...themeTemplate.items);
     }
     
+    logger.info(`총 테마 아이템 수: ${allThemeItems.length}`);
     return allThemeItems;
   } catch (error) {
     logger.error(`테마 기반 준비물 조회 오류: ${error.message}`);
+    logger.error(error.stack);
     return [];
   }
 };

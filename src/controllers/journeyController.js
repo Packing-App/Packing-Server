@@ -472,18 +472,9 @@ const getRecommendations = async (req, res) => {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
     }
 
-    // // 참여자 확인 (보안 검사)
-    // if (!journey.participants.includes(req.user._id)) {
-    //   return sendError(res, 403, '이 여행에 접근할 권한이 없습니다');
-    // }
-
-    logger.info(`추천 준비물 조회 시작: 여행 ${journey.title}`);
-
     // 준비물 추천 서비스 호출
     const itemRecommendationService = require('../services/itemRecommendationService');
     const recommendedItems = await itemRecommendationService.getRecommendedItems(journey);
-
-    logger.info(`추천된 아이템 수: ${recommendedItems.length}`);
 
     // 결과 분류 (옷차림, 필수품 등으로 구분)
     const categories = {
@@ -497,75 +488,24 @@ const getRecommendations = async (req, res) => {
     };
 
     // 카테고리별로 아이템 분류
-    recommendedItems.forEach((item, index) => {
-      // 아이템 유효성 검사
-      if (!item || typeof item !== 'object') {
-        logger.error(`분류 중 잘못된 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
-        return;
-      }
-      
-      if (!item.name) {
-        logger.error(`분류 중 name 없는 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
-        return;
-      }
-      
-      if (!item.category) {
-        logger.error(`분류 중 category 없는 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
-        return;
-      }
-
+    recommendedItems.forEach(item => {
       if (categories[item.category]) {
         categories[item.category].items.push(item);
       } else {
-        logger.warn(`알 수 없는 카테고리 '${item.category}' - other로 분류`);
         categories.other.items.push(item);
       }
     });
 
-    // 각 카테고리의 아이템 수 로깅
-    Object.keys(categories).forEach(key => {
-      const category = categories[key];
-      logger.info(`카테고리 ${key}: ${category.items.length}개`);
-      
-      // 각 카테고리의 아이템 검증
-      category.items.forEach((item, index) => {
-        if (!item.name || !item.category) {
-          logger.error(`카테고리 ${key}의 잘못된 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
-        }
-      });
-    });
-
-    // 응답 전에 최종 검증
-    Object.keys(categories).forEach(key => {
-      categories[key].items = categories[key].items.filter(item => {
-        if (!item || !item.name || !item.category) {
-          logger.warn(`응답에서 제거된 잘못된 아이템: ${JSON.stringify(item)}`);
-          return false;
-        }
-        return true;
-      });
-    });
-
-    // 최종 응답 로깅
-    const responseData = {
+    return sendSuccess(res, 200, '여행 정보에 맞는 추천 준비물 목록입니다', {
       journey: journey,
       categories: categories
-    };
-    
-    logger.info(`응답 데이터 준비 완료`);
-    
-    // 디버깅: 응답 검증
-    if (categories.other && categories.other.items.length > 0) {
-      logger.info(`other 카테고리 첫 번째 아이템: ${JSON.stringify(categories.other.items[0])}`);
-    }
-
-    return sendSuccess(res, 200, '여행 정보에 맞는 추천 준비물 목록입니다', responseData);
+    });
   } catch (error) {
     logger.error(`추천 준비물 조회 오류: ${error.message}`);
-    logger.error(error.stack);
     return sendError(res, 500, '서버 오류가 발생했습니다');
   }
 };
+
 module.exports = {
   getJourneys,
   getJourneyById,

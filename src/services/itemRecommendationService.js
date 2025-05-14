@@ -8,29 +8,59 @@ const logger = require('../config/logger');
  * @param {Object} journey 여행 정보
  * @returns {Promise<Array>} 추천 준비물 목록
  */
+
 const getRecommendedItems = async (journey) => {
   try {
+    logger.info(`추천 아이템 생성 시작: 여행 ${journey.title}, 테마: ${journey.themes}`);
+    
     // 1. 테마 기반 기본 준비물 가져오기 (다중 테마 지원)
     const themeItems = await getThemeBasedItems(journey.themes);
+    logger.info(`테마 아이템: ${themeItems.length}개`);
+    themeItems.forEach((item, index) => {
+      if (!item.name) {
+        logger.error(`테마 아이템 ${index}: name 없음 - ${JSON.stringify(item)}`);
+      }
+    });
     
     // 2. 날씨 기반 준비물 가져오기
     const weatherItems = await getWeatherBasedItems(journey.destination, journey.startDate);
+    logger.info(`날씨 아이템: ${weatherItems.length}개`);
+    weatherItems.forEach((item, index) => {
+      if (!item.name) {
+        logger.error(`날씨 아이템 ${index}: name 없음 - ${JSON.stringify(item)}`);
+      }
+    });
     
     // 3. 여행 기간 기반 준비물 계산
     const durationItems = getDurationBasedItems(journey.startDate, journey.endDate);
+    logger.info(`기간 아이템: ${durationItems.length}개`);
+    durationItems.forEach((item, index) => {
+      if (!item.name) {
+        logger.error(`기간 아이템 ${index}: name 없음 - ${JSON.stringify(item)}`);
+      }
+    });
     
     // 4. 교통 수단 기반 준비물
     const transportItems = getTransportBasedItems(journey.transportType);
+    logger.info(`교통 아이템: ${transportItems.length}개`);
+    transportItems.forEach((item, index) => {
+      if (!item.name) {
+        logger.error(`교통 아이템 ${index}: name 없음 - ${JSON.stringify(item)}`);
+      }
+    });
     
     // 5. 모든 준비물 통합
     const allItems = [...themeItems, ...weatherItems, ...durationItems, ...transportItems];
+    logger.info(`전체 아이템 (병합 전): ${allItems.length}개`);
     
     // 6. 중복 제거 및 우선순위 병합
     const uniqueItems = mergeDuplicateItems(allItems);
+    logger.info(`유니크 아이템 (병합 후): ${uniqueItems.length}개`);
     
     return uniqueItems;
   } catch (error) {
     logger.error(`준비물 추천 오류: ${error.message}`);
+    logger.error(error.stack);
     return getDefaultItems(); // 오류 발생 시 기본 준비물 반환
   }
 };
@@ -40,17 +70,37 @@ const getRecommendedItems = async (journey) => {
  * @param {Array} items 전체 아이템 목록
  * @returns {Array} 중복 제거된 아이템 목록
  */
+
 const mergeDuplicateItems = (items) => {
   const itemMap = new Map();
   
-  items.forEach(item => {
+  // 디버깅: 입력 아이템 검증
+  logger.info(`mergeDuplicateItems: 입력 아이템 수 ${items.length}`);
+  
+  items.forEach((item, index) => {
+    // 아이템 유효성 검사
+    if (!item || typeof item !== 'object') {
+      logger.error(`mergeDuplicateItems: 잘못된 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
+      return;
+    }
+    
+    if (!item.name) {
+      logger.error(`mergeDuplicateItems: name 없는 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
+      return;
+    }
+    
+    if (!item.category) {
+      logger.error(`mergeDuplicateItems: category 없는 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
+      return;
+    }
+    
     const key = item.name;
     
     if (itemMap.has(key)) {
       const existingItem = itemMap.get(key);
       // isEssential이 true인 것을 우선
       if (item.isEssential && !existingItem.isEssential) {
-        itemMap.set(key, item);
+        itemMap.set(key, { ...item });
       }
       // count가 있는 경우 큰 값으로 업데이트
       if (item.count && existingItem.count) {
@@ -59,11 +109,27 @@ const mergeDuplicateItems = (items) => {
         existingItem.count = item.count;
       }
     } else {
-      itemMap.set(key, { ...item });
+      // 새 아이템 추가 시 검증
+      const newItem = { ...item };
+      if (!newItem.name || !newItem.category) {
+        logger.error(`mergeDuplicateItems: 복사 후 필수 속성 누락: ${JSON.stringify(newItem)}`);
+        return;
+      }
+      itemMap.set(key, newItem);
     }
   });
   
-  return Array.from(itemMap.values());
+  const result = Array.from(itemMap.values());
+  
+  // 디버깅: 결과 검증
+  logger.info(`mergeDuplicateItems: 출력 아이템 수 ${result.length}`);
+  result.forEach((item, index) => {
+    if (!item.name || !item.category) {
+      logger.error(`mergeDuplicateItems 결과: 잘못된 아이템 (인덱스 ${index}): ${JSON.stringify(item)}`);
+    }
+  });
+  
+  return result;
 };
 
 /**

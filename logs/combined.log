@@ -40,3 +40,13 @@
 {"level":"info","message":"Server running in production mode on port 5001","timestamp":"2025-05-07 03:11:17"}
 {"level":"info","message":"MongoDB Connected: cluster0-shard-00-00.2mvqu.mongodb.net","timestamp":"2025-05-07 03:11:18"}
 {"level":"info","message":"Theme templates already exist, skipping seed","timestamp":"2025-05-07 03:11:18"}
+{"level":"info","message":"알림 스케줄러가 초기화되었습니다.","timestamp":"2025-05-14 15:54:46"}
+{"level":"error","message":"Port 5000 is busy, trying port 5001...","timestamp":"2025-05-14 15:54:46"}
+{"level":"info","message":"Server running in production mode on port 5001","timestamp":"2025-05-14 15:54:46"}
+{"level":"info","message":"MongoDB Connected: cluster0-shard-00-01.2mvqu.mongodb.net","timestamp":"2025-05-14 15:54:46"}
+{"level":"info","message":"Theme templates already exist, skipping seed","timestamp":"2025-05-14 15:54:47"}
+{"level":"info","message":"알림 스케줄러가 초기화되었습니다.","timestamp":"2025-05-14 16:30:08"}
+{"level":"error","message":"Port 5000 is busy, trying port 5001...","timestamp":"2025-05-14 16:30:08"}
+{"level":"info","message":"Server running in production mode on port 5001","timestamp":"2025-05-14 16:30:08"}
+{"level":"info","message":"MongoDB Connected: cluster0-shard-00-01.2mvqu.mongodb.net","timestamp":"2025-05-14 16:30:08"}
+{"level":"info","message":"Theme templates seeded successfully","timestamp":"2025-05-14 16:30:09"}

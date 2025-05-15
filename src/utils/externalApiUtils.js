@@ -1,7 +1,7 @@
 // src/utils/externalApiUtils.js
 const axios = require('axios');
 const logger = require('../config/logger');
-const { translateCityName } = require('./locationUtils');
+const { processCityName } = require('./locationUtils');
 
 /**
  * Open Weather Map API를 통해 날씨 정보를 가져옵니다.
@@ -20,7 +20,7 @@ const getWeatherData = async (location, countryCode = null, date = null) => {
     }
 
     // 한글 도시명을 영문으로 변환 
-    const translatedCity = translateCityName(location);
+    const translatedCity = processCityName(location);
     const cityName = translatedCity.name;
     const cityCountryCode = countryCode || translatedCity.countryCode;
     
@@ -205,7 +205,7 @@ const getDestinationImage = async (query, theme = null) => {
     }
 
     // 한글 도시명을 영문으로 변환
-    const translatedCity = translateCityName(query);
+    const translatedCity = processCityName(query);
     const cityName = translatedCity.name;
 
     // 검색어로 cityName만 사용 (theme은 사용하지 않음)

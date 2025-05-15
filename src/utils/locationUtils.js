@@ -7,6 +7,26 @@ const {countryMapping, cityTranslations} = require('../data/cityTranslations');
 let citiesCache = null;
 
 /**
+ * 도시명이 한글인지 확인
+ */
+const isKoreanCityName = (cityName) => {
+  const koreanRegex = /[가-힣]/;
+  return koreanRegex.test(cityName);
+};
+
+/**
+ * 영문 도시명을 역으로 검색해서 국가 코드 찾기
+ */
+const findCountryCodeByEnglishName = (englishCityName) => {
+  for (const [korName, cityInfo] of Object.entries(cityTranslations)) {
+    if (cityInfo.en.toLowerCase() === englishCityName.toLowerCase()) {
+      return cityInfo.countryCode;
+    }
+  }
+  return null;
+};
+
+/**
  * 한글 도시명을 영문으로 변환
  * @param {string} koreanCityName 한글 도시명
  * @returns {Object} 영문 도시명과 국가 코드
@@ -23,6 +43,24 @@ const translateCityName = (koreanCityName) => {
   
   // 매핑이 없는 경우 그대로 반환 (기본 국가코드 KR)
   return { name: koreanCityName, countryCode: 'KR' };
+};
+
+/**
+ * 한글/영어 도시명을 처리하여 영문 도시명과 국가 코드 반환
+ */
+const processCityName = (cityName) => {
+  if (!cityName) {
+    return { name: '', countryCode: 'KR' };
+  }
+  
+  // 한글 도시명인 경우 -> 영문으로 변환
+  if (isKoreanCityName(cityName)) {
+    return translateCityName(cityName);
+  }
+  
+  // 영문 도시명인 경우 -> 국가 코드 찾기
+  const countryCode = findCountryCodeByEnglishName(cityName);
+  return { name: cityName, countryCode: countryCode || '' };
 };
 
 /**
@@ -191,6 +229,7 @@ const searchCities = (query, limit = 30) => {
 };
 
 module.exports = {
+  processCityName,
   translateCityName,
   initCityList,
   searchCities

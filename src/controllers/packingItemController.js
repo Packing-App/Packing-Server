@@ -556,17 +556,27 @@ const getThemeTemplates = async (req, res) => {
 const getThemeTemplateByName = async (req, res) => {
   try {
     const { themeName } = req.params;
+    const lang = req.lang || 'ko'; // 요청의 언어 코드
+    const messages = require('../localization/messages');
     
     const template = await ThemeTemplate.findOne({ themeName });
     
     if (!template) {
-      return sendError(res, 404, '해당 테마의 템플릿을 찾을 수 없습니다');
+      return sendError(res, 404, messages[lang].errors.templateNotFound);
     }
     
-    return sendSuccess(res, 200, `${themeName} 테마의 준비물 템플릿입니다`, template);
+    // 테마 이름 번역
+    const themeDisplayName = messages[lang].themes[themeName] || themeName;
+    
+    // 성공 메시지 포맷팅 (printf 스타일 - %s를 테마 이름으로 대체)
+    const successMessage = messages[lang].success.templateFound.replace('%s', themeDisplayName);
+    
+    return sendSuccess(res, 200, successMessage, template);
   } catch (error) {
     logger.error(`테마 템플릿 조회 오류: ${error.message}`);
-    return sendError(res, 500, '서버 오류가 발생했습니다');
+    const lang = req.lang || 'ko';
+    const messages = require('../localization/messages');
+    return sendError(res, 500, messages[lang].errors.serverError);
   }
 };
 

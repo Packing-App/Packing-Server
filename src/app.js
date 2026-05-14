@@ -45,6 +45,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'PackingAPP Server is Running.' });
 });
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
+
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

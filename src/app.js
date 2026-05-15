@@ -51,6 +51,7 @@ app.get('/health', (req, res) => {
 });
 
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)
+// 기존 /api 접두사를 사용하는 라우트
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/friendships', friendshipRoutes);
@@ -59,6 +60,16 @@ app.use('/api/packing-items', packingItemRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// iOS 앱과의 호환성을 위해 /api 접두사가 없는 라우트도 함께 제공
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/friendships', friendshipRoutes);
+app.use('/journeys', journeyRoutes);
+app.use('/packing-items', packingItemRoutes);
+app.use('/locations', locationRoutes);
+app.use('/devices', deviceRoutes);
+app.use('/notifications', notificationRoutes);
 
 // 에러 핸들링 미들웨어 - 임시 간단한 에러 핸들러 추가
 app.use((err, req, res, next) => {

@@ -47,4 +47,15 @@ router.put('/invitations/:id', protect, journeyController.respondToInvitation);
 // 여행 테마별 추천 준비물 조회
 router.get('/:id/recommendations', protect, journeyController.getRecommendations);
 
+// 딥링크 초대 링크 발급 (참가자만)
+router.post(
+  '/:id/invite-link',
+  protect,
+  loadJourneyRequireParticipant,
+  journeyController.getInviteLink
+);
+
+// 초대 코드로 여행 참여
+router.post('/join', protect, journeyController.joinByInviteCode);
+
 module.exports = router;

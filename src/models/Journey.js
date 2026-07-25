@@ -65,7 +65,13 @@ const journeySchema = new mongoose.Schema(
     participants: [{    // 여행 참가자 ID 목록
       type: mongoose.Schema.Types.ObjectId, // User 스키마와 연결
       ref: 'User'
-    }]
+    }],
+    inviteCode: {   // 딥링크 초대 코드 (링크로 참여). 발급 전엔 null
+      type: String,
+      unique: true,
+      sparse: true,   // null 다수 허용하면서 값이 있으면 유니크
+      default: null
+    }
   },
   {
     timestamps: true    // createdAt, updatedAt 필드 추가

@@ -8,6 +8,7 @@ const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
 const { isParticipant, isCreator } = require('../middlewares/journeyAccess');
+const { generateInviteCode } = require('../utils/inviteCode');
 
 /**
  * 사용자의 여행 목록 조회
@@ -447,6 +448,101 @@ const getRecommendations = async (req, res) => {
   }
 };
 
+/**
+ * 딥링크 초대 링크 발급 (참가자만)
+ * @route POST /api/journeys/:id/invite-link
+ * @access Private
+ * req.journey는 loadJourneyRequireParticipant 미들웨어가 주입.
+ */
+const getInviteLink = async (req, res) => {
+  try {
+    const journey = req.journey;
+
+    if (journey.isPrivate) {
+      return sendError(res, 400, '혼자 여행은 초대할 수 없습니다');
+    }
+
+    // 코드가 없으면 생성 (충돌 시 최대 5회 재시도)
+    if (!journey.inviteCode) {
+      let code;
+      for (let i = 0; i < 5; i++) {
+        code = generateInviteCode();
+        const exists = await Journey.exists({ inviteCode: code });
+        if (!exists) break;
+      }
+      journey.inviteCode = code;
+      await journey.save();
+    }
+
+    const baseUrl = process.env.CLIENT_URL || 'https://packing-api.iyungui.dev';
+    const inviteUrl = `${baseUrl}/join/${journey.inviteCode}`;
+
+    return sendSuccess(res, 200, '초대 링크가 생성되었습니다', {
+      inviteCode: journey.inviteCode,
+      inviteUrl
+    });
+  } catch (error) {
+    logger.error(`초대 링크 생성 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
+/**
+ * 초대 코드로 여행 참여
+ * @route POST /api/journeys/join
+ * @access Private
+ * 미가입자가 링크로 유입→가입 후, 클라이언트가 저장해둔 코드로 이 API를 호출한다.
+ */
+const joinByInviteCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return sendError(res, 400, '초대 코드를 입력해주세요');
+    }
+
+    const journey = await Journey.findOne({ inviteCode: code });
+    if (!journey) {
+      return sendError(res, 404, '유효하지 않은 초대 코드입니다');
+    }
+
+    if (journey.isPrivate) {
+      return sendError(res, 400, '혼자 여행에는 참여할 수 없습니다');
+    }
+
+    const populate = (id) =>
+      Journey.findById(id).populate('participants', 'email name profileImage socialType');
+
+    // 이미 참가자면 재진입 허용 (참여 화면으로 그대로 이동)
+    if (isParticipant(journey, req.user._id)) {
+      const already = await populate(journey._id);
+      return sendSuccess(res, 200, '이미 참여 중인 여행입니다', already);
+    }
+
+    journey.participants.push(req.user._id);
+    await journey.save();
+
+    // 방장에게 참여 알림
+    const creator = await User.findById(journey.creatorId);
+    if (creator) {
+      await notifyUser(creator, {
+        type: 'journeyInvitationResponse',
+        journeyId: journey._id,
+        content: `${req.user.name}님이 '${journey.title}' 여행에 참여했습니다.`
+      }, {
+        title: '여행 참여',
+        pushData: { journeyId: journey._id.toString() }
+      });
+    }
+
+    const joined = await populate(journey._id);
+    return sendSuccess(res, 200, '여행에 참여했습니다', joined);
+  } catch (error) {
+    logger.error(`초대 코드 참여 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
 module.exports = {
   getJourneys,
   getJourneyById,
@@ -456,5 +552,7 @@ module.exports = {
   inviteParticipant,
   removeParticipant,
   respondToInvitation,
-  getRecommendations
+  getRecommendations,
+  getInviteLink,
+  joinByInviteCode
 };

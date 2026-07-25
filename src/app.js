@@ -69,6 +69,53 @@ app.get('/health/ready', (req, res) => {
   });
 });
 
+// Apple App Site Association (유니버설 링크). /join/* 경로를 앱으로 연결.
+// 확장자 없이 application/json으로 서빙해야 iOS가 인식한다.
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  const teamId = process.env.APPLE_TEAM_ID;
+  res.type('application/json').json({
+    applinks: {
+      apps: [],
+      details: [
+        {
+          appID: `${teamId}.me.iyungui.Packing`,
+          paths: ['/join/*']
+        }
+      ]
+    }
+  });
+});
+
+// 초대 링크 웹 랜딩 (미설치 폴백). 앱 설치 시 iOS가 이 페이지 대신 앱을 연다.
+app.get('/join/:code', (req, res) => {
+  const code = String(req.params.code || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 16);
+  const appStoreUrl = 'https://apps.apple.com/app/id6745450311';
+  res.type('html').send(`<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>패킹 여행 초대</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;margin:0;padding:0;background:#f7f7f8;color:#1c1c1e;display:flex;min-height:100vh;align-items:center;justify-content:center}
+  .card{background:#fff;border-radius:20px;padding:32px 24px;max-width:340px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+  h1{font-size:20px;margin:8px 0 4px}
+  p{color:#6b6b70;font-size:14px;line-height:1.5}
+  .code{font-size:22px;font-weight:700;letter-spacing:2px;margin:16px 0;color:#2b7fff}
+  a.btn{display:block;margin-top:16px;background:#2b7fff;color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:600}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧳 패킹 여행 초대</h1>
+    <p>친구가 여행에 초대했어요.<br>패킹 앱에서 아래 코드로 참여하세요.</p>
+    <div class="code">${code}</div>
+    <a class="btn" href="${appStoreUrl}">App Store에서 패킹 받기</a>
+  </div>
+</body>
+</html>`);
+});
+
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)
 // 기존 /api 접두사를 사용하는 라우트
 app.use('/api/auth', authRoutes);

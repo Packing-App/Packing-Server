@@ -32,9 +32,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 app.use(passport.initialize());
 
-// 미들웨어 부분에 추가
+// SESSION_SECRET은 필수. 하드코딩 폴백을 두지 않는다(시크릿 위생).
+// 미설정 시 조용히 기본값으로 뜨면 세션 위조 위험이 있으므로 명확히 종료한다.
+if (!process.env.SESSION_SECRET) {
+  logger.error('SESSION_SECRET 환경변수가 설정되지 않았습니다. 서버를 종료합니다.');
+  process.exit(1);
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'packingapp-secret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
   cookie: { secure: process.env.NODE_ENV === 'production' }

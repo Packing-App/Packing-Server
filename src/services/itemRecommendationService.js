@@ -286,5 +286,9 @@ const getDefaultItems = () => {
 };
 
 module.exports = {
-  getRecommendedItems
+  getRecommendedItems,
+  // 순수함수 — 유닛테스트용으로 노출 (DB/외부 API 의존 없음)
+  getDurationBasedItems,
+  getTransportBasedItems,
+  mergeDuplicateItems
 };

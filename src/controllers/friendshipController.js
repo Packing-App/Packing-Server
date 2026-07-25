@@ -4,8 +4,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
-const { sendNotification } = require('../socket/socketSetup');
-const { sendPushToIOS } = require('../services/pushNotificationService');
+const { notifyUser } = require('../services/notificationService');
 
 /**
  * 친구 목록 조회
@@ -138,40 +137,15 @@ const sendFriendRequest = async (req, res) => {
       status: 'pending'
     });
     
-    // 알림 생성
-    const notification = await Notification.create({
-      userId: receiver._id,
+    // 알림 생성 + 소켓 + 푸시
+    await notifyUser(receiver, {
       type: 'friendRequest',
       content: `${req.user.name}님이 친구 요청을 보냈습니다.`,
-      // 친구 요청 ID를 메타데이터로 저장하여 나중에 알림 읽음 처리 시 사용
-      metadata: {
-        friendshipId: friendship._id.toString()
-      }
+      metadata: { friendshipId: friendship._id.toString() }
+    }, {
+      title: '친구 요청',
+      pushData: { friendshipId: friendship._id.toString() }
     });
-
-    // 소켓을 통한 실시간 알림 전송
-    if (global.io) {
-      sendNotification(global.io, receiver._id.toString(), notification);
-    }
-
-    // iOS 푸시 알림 전송
-    if (receiver.deviceToken && receiver.pushNotificationEnabled) {
-      const title = '친구 요청';
-      const content = `${req.user.name}님이 친구 요청을 보냈습니다.`;
-      
-      await sendPushToIOS(
-        receiver.deviceToken,
-        title,
-        content,
-        {
-          notificationId: notification._id.toString(),
-          type: 'friendRequest',
-          friendshipId: friendship._id.toString() // 친구 요청 ID도 함께 전송
-        }
-      );
-      
-      logger.info(`친구 요청 푸시 알림 전송: ${receiver.name}에게`);
-    }
 
     return sendSuccess(res, 201, '친구 요청을 성공적으로 보냈습니다', friendship);
   } catch (error) {
@@ -225,20 +199,6 @@ const respondToFriendRequest = async (req, res) => {
         isRead: false
       });
       
-      // 2. 메타데이터가 없는 경우, 내용으로 검색 (기존 알림)
-      if (!friendRequestNotification) {
-        // 친구 요청자 정보 가져오기
-        const requester = await User.findById(friendship.requesterId);
-        if (requester) {
-          friendRequestNotification = await Notification.findOne({
-            userId: req.user._id,
-            type: 'friendRequest',
-            content: new RegExp(`${requester.name}.*친구 요청`, 'i'),
-            isRead: false
-          });
-        }
-      }
-      
       // 관련 알림을 찾았다면 읽음 처리
       if (friendRequestNotification) {
         friendRequestNotification.isRead = true;
@@ -252,45 +212,17 @@ const respondToFriendRequest = async (req, res) => {
 
     // 친구 요청 수락 시 상대방에게 알림 생성
     if (accept) {
-      // 알림 생성 결과를 변수에 저장
-      const notification = await Notification.create({
-        userId: friendship.requesterId,
-        type: 'friendRequestResponse',
-        content: `${req.user.name}님이 친구 요청을 수락했습니다.`,
-        // 친구 관계 ID 저장
-        metadata: {
-          friendshipId: friendship._id.toString()
-        }
-      });
-
-      // 소켓을 통한 실시간 알림 전송
-      if (global.io) {
-        sendNotification(global.io, friendship.requesterId.toString(), notification);
-      }
-
-      // iOS 푸시 알림 전송
+      // 상대방(요청자)에게 수락 알림 생성 + 소켓 + 푸시
       const requester = await User.findById(friendship.requesterId);
-      if (requester && requester.deviceToken && requester.pushNotificationEnabled) {
-        const title = '친구 요청 수락';
-        const content = `${req.user.name}님이 친구 요청을 수락했습니다.`;
-        
-        try {
-          await sendPushToIOS(
-            requester.deviceToken,
-            title,
-            content,
-            {
-              notificationId: notification._id.toString(),
-              type: 'friendRequestResponse',
-              friendshipId: friendship._id.toString()
-            }
-          );
-          
-          logger.info(`친구 요청 수락 푸시 알림 전송: ${requester.name}에게`);
-        } catch (pushError) {
-          // 푸시 전송 실패해도 API 응답에는 영향 없도록 처리
-          logger.error(`푸시 알림 전송 오류: ${pushError.message}`);
-        }
+      if (requester) {
+        await notifyUser(requester, {
+          type: 'friendRequestResponse',
+          content: `${req.user.name}님이 친구 요청을 수락했습니다.`,
+          metadata: { friendshipId: friendship._id.toString() }
+        }, {
+          title: '친구 요청 수락',
+          pushData: { friendshipId: friendship._id.toString() }
+        });
       }
     }
 

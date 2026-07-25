@@ -6,8 +6,7 @@ const PackingItem = require('../models/PackingItem');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
-const { sendNotification } = require('../socket/socketSetup');
-const { sendPushToIOS } = require('../services/pushNotificationService');
+const { notifyUser } = require('../services/notificationService');
 
 /**
  * 사용자의 여행 목록 조회
@@ -269,38 +268,15 @@ const inviteParticipant = async (req, res) => {
       return sendError(res, 400, '이미 여행에 참가 중인 사용자입니다');
     }
 
-    // 초대 알림 생성
-    const notification = await Notification.create({
-      userId: invitedUser._id,
-      journeyId: journey._id,
+    // 초대 알림 생성 + 소켓 + 푸시
+    const notification = await notifyUser(invitedUser, {
       type: 'invitation',
+      journeyId: journey._id,
       content: `${req.user.name}님이 '${journey.title}' 여행에 초대했습니다.`
+    }, {
+      title: '여행 초대',
+      pushData: { journeyId: journey._id.toString() }
     });
-
-
-    // 소켓을 통한 실시간 알림 전송 (추가)
-    if (global.io) {
-      sendNotification(global.io, invitedUser._id.toString(), notification);
-    }
-    
-    // iOS 푸시 알림 전송 (추가)
-    if (invitedUser.deviceToken && invitedUser.pushNotificationEnabled) {
-      const title = '여행 초대';
-      const content = `${req.user.name}님이 '${journey.title}' 여행에 초대했습니다.`;
-      
-      await sendPushToIOS(
-        invitedUser.deviceToken,
-        title,
-        content,
-        {
-          notificationId: notification._id.toString(),
-          journeyId: journey._id.toString(),
-          type: 'invitation'
-        }
-      );
-      
-      logger.info(`여행 초대 푸시 알림 전송: ${invitedUser.name}에게`);
-    }
 
     return sendSuccess(res, 200, '여행 초대가 성공적으로 전송되었습니다', { notification });
   } catch (error) {
@@ -413,38 +389,15 @@ const respondToInvitation = async (req, res) => {
       // 여행 생성자 정보 가져오기
       const creator = await User.findById(journey.creatorId);
       
-      // 생성자에게 알림 생성
-      const creatorNotification = await Notification.create({
-        userId: creator._id,
-        journeyId: journey._id,
+      // 생성자에게 수락 알림 생성 + 소켓 + 푸시
+      await notifyUser(creator, {
         type: 'journeyInvitationResponse',
-        content: `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`,
-        isRead: false
+        journeyId: journey._id,
+        content: `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`
+      }, {
+        title: '초대 수락',
+        pushData: { journeyId: journey._id.toString() }
       });
-      
-      // 소켓을 통한 실시간 알림 전송
-      if (global.io) {
-        sendNotification(global.io, creator._id.toString(), creatorNotification);
-      }
-      
-      // iOS 푸시 알림 전송
-      if (creator.deviceToken && creator.pushNotificationEnabled) {
-        const title = '초대 수락';
-        const content = `${req.user.name}님이 '${journey.title}' 여행 초대를 수락했습니다.`;
-        
-        await sendPushToIOS(
-          creator.deviceToken,
-          title,
-          content,
-          {
-            notificationId: creatorNotification._id.toString(),
-            journeyId: journey._id.toString(),
-            type: 'journeyInvitationResponse'
-          }
-        );
-        
-        logger.info(`초대 수락 푸시 알림 전송: ${creator.name}에게`);
-      }
 
       return sendSuccess(res, 200, '여행 초대를 수락했습니다');
     } else {
@@ -467,9 +420,17 @@ const getRecommendations = async (req, res) => {
   try {
     const journey = await Journey.findById(req.params.id)
     .populate('participants', 'email name profileImage socialType');
-    
+
     if (!journey) {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
+    }
+
+    // 권한 확인 (참가자만 추천 조회 가능). participants는 populate돼 있어 _id로 비교.
+    const isParticipant = journey.participants.some(
+      p => p._id.toString() === req.user._id.toString()
+    );
+    if (!isParticipant) {
+      return sendError(res, 403, '이 여행의 준비물을 조회할 권한이 없습니다');
     }
 
     // 준비물 추천 서비스 호출

@@ -408,10 +408,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: '로그인 중 오류가 발생했습니다'
-    });
+    return sendError(res, 500, '로그인 중 오류가 발생했습니다');
   }
 };
 

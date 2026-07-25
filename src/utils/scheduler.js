@@ -1,11 +1,8 @@
 // src/utils/scheduler.js
 const cron = require('node-cron');
 const Journey = require('../models/Journey');
-const Notification = require('../models/Notification');
-const User = require('../models/User');
 const { getWeatherData, analyzeWeatherCondition } = require('./externalApiUtils');
-const { sendNotification } = require('../socket/socketSetup');
-const { sendPushToIOS } = require('../services/pushNotificationService');
+const { notifyUser } = require('../services/notificationService');
 const logger = require('../config/logger');
 
 /**
@@ -84,33 +81,15 @@ const scheduleJourneyReminders = async () => {
         const title = '여행 준비 알림';
         const content = `'${journey.title}' 여행이 내일 시작합니다. 준비물을 확인해보세요!`;
         
-        // 알림 생성
-        const notification = await Notification.create({
-          userId: participant._id,
-          journeyId: journey._id,
+        // 알림 생성 + 소켓 + 푸시
+        const notification = await notifyUser(participant, {
           type: 'reminder',
-          content: content,
-          isRead: false
+          journeyId: journey._id,
+          content
+        }, {
+          title,
+          pushData: { journeyId: journey._id.toString() }
         });
-
-        // 소켓을 통한 실시간 알림 전송
-        if (global.io) {
-          sendNotification(global.io, participant._id.toString(), notification);
-        }
-        
-        // iOS 푸시 알림 전송 (추가)
-        if (participant.deviceToken) {
-          await sendPushToIOS(
-            participant.deviceToken, 
-            title, 
-            content,
-            { 
-              notificationId: notification._id.toString(),
-              journeyId: journey._id.toString(),
-              type: 'reminder'
-            }
-          );
-        }
 
         logger.info(`여행 알림 생성: ${notification._id} → ${participant.name}`);
       }
@@ -197,35 +176,16 @@ const scheduleWeatherAlerts = async () => {
         );
 
         for (const participant of eligibleParticipants) {
-          // 알림 생성
+          // 알림 생성 + 소켓 + 푸시
           const fullContent = `${content} ${itemToRemind}`;
-          const notification = await Notification.create({
-            userId: participant._id,
-            journeyId: journey._id,
+          const notification = await notifyUser(participant, {
             type: 'weather',
-            content: fullContent,
-            isRead: false
+            journeyId: journey._id,
+            content: fullContent
+          }, {
+            title,
+            pushData: { journeyId: journey._id.toString(), weatherCondition: condition }
           });
-
-          // 소켓을 통한 실시간 알림 전송
-          if (global.io) {
-            sendNotification(global.io, participant._id.toString(), notification);
-          }
-          
-          // iOS 푸시 알림 전송
-          if (participant.deviceToken) {
-            await sendPushToIOS(
-              participant.deviceToken, 
-              title, 
-              fullContent,
-              { 
-                notificationId: notification._id.toString(),
-                journeyId: journey._id.toString(),
-                type: 'weather',
-                weatherCondition: condition
-              }
-            );
-          }
 
           logger.info(`날씨 알림 생성: ${notification._id} → ${participant.name}`);
         }
@@ -282,34 +242,15 @@ const scheduleWeeklyJourneyReminders = async () => {
         const title = '이번 주 여행 알림';
         const content = `'${journey.title}' 여행이 ${daysUntil}일 후에 시작합니다. 준비 계획을 세워보세요!`;
         
-        // 알림 생성
-        const notification = await Notification.create({
-          userId: participant._id,
-          journeyId: journey._id,
+        // 알림 생성 + 소켓 + 푸시
+        const notification = await notifyUser(participant, {
           type: 'reminder',
-          content: content,
-          isRead: false
+          journeyId: journey._id,
+          content
+        }, {
+          title,
+          pushData: { journeyId: journey._id.toString(), daysUntil }
         });
-
-        // 소켓을 통한 실시간 알림 전송
-        if (global.io) {
-          sendNotification(global.io, participant._id.toString(), notification);
-        }
-        
-        // iOS 푸시 알림 전송
-        if (participant.deviceToken) {
-          await sendPushToIOS(
-            participant.deviceToken, 
-            title, 
-            content,
-            { 
-              notificationId: notification._id.toString(),
-              journeyId: journey._id.toString(),
-              type: 'reminder',
-              daysUntil: daysUntil
-            }
-          );
-        }
 
         logger.info(`주간 여행 알림 생성: ${notification._id} → ${participant.name}`);
       }

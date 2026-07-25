@@ -47,11 +47,6 @@ const socialLoginSuccess = async (req, res) => {
 
     const errorRedirectUrl = `packingapp://auth/error?message=${encodeURIComponent('소셜 로그인 처리 중 오류가 발생했습니다')}`;
     res.redirect(errorRedirectUrl);
-
-    // res.status(500).json({
-    //   success: false,
-    //   message: '소셜 로그인 처리 중 오류가 발생했습니다'
-    // });
   }
 };
 

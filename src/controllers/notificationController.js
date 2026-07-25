@@ -3,8 +3,7 @@ const Notification = require('../models/Notification');
 const Journey = require('../models/Journey');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const { getWeatherData, analyzeWeatherCondition } = require('../utils/externalApiUtils');
-const { sendPushToIOS } = require('../services/pushNotificationService');
-const { sendNotification } = require('../socket/socketSetup');
+const { notifyUser } = require('../services/notificationService');
 const logger = require('../config/logger');
 
 /**
@@ -136,33 +135,15 @@ const createJourneyReminder = async (req, res) => {
     const title = '여행 알림';
     const content = `'${journey.title}' 여행 준비를 시작해보세요!`;
 
-    // 알림 생성
-    const notification = await Notification.create({
-      userId: req.user._id,
-      journeyId: journey._id,
+    // 알림 생성 + 소켓 + 푸시
+    const notification = await notifyUser(req.user, {
       type: 'reminder',
-      content: content,
-      isRead: false
+      journeyId: journey._id,
+      content
+    }, {
+      title,
+      pushData: { journeyId: journey._id.toString() }
     });
-
-    // 소켓을 통한 실시간 알림 전송
-    if (global.io) {
-      sendNotification(global.io, req.user._id.toString(), notification);
-    }
-    
-    // iOS 푸시 알림 전송
-    if (req.user.deviceToken && req.user.pushNotificationEnabled) {
-      await sendPushToIOS(
-        req.user.deviceToken,
-        title,
-        content,
-        {
-          notificationId: notification._id.toString(),
-          journeyId: journey._id.toString(),
-          type: 'reminder'
-        }
-      );
-    }
 
     return sendSuccess(res, 201, '여행 일정 알림이 생성되었습니다', notification);
   } catch (error) {
@@ -235,33 +216,14 @@ const createWeatherAlert = async (req, res) => {
 
     // 알림 생성
     const fullContent = `${content} ${itemToRemind}`;
-    const notification = await Notification.create({
-      userId: req.user._id,
-      journeyId: journey._id,
+    const notification = await notifyUser(req.user, {
       type: 'weather',
-      content: fullContent,
-      isRead: false
+      journeyId: journey._id,
+      content: fullContent
+    }, {
+      title,
+      pushData: { journeyId: journey._id.toString(), weatherCondition: condition }
     });
-
-    // 소켓을 통한 실시간 알림 전송
-    if (global.io) {
-      sendNotification(global.io, req.user._id.toString(), notification);
-    }
-    
-    // iOS 푸시 알림 전송
-    if (req.user.deviceToken && req.user.pushNotificationEnabled) {
-      await sendPushToIOS(
-        req.user.deviceToken,
-        title,
-        fullContent,
-        {
-          notificationId: notification._id.toString(),
-          journeyId: journey._id.toString(),
-          type: 'weather',
-          weatherCondition: condition
-        }
-      );
-    }
 
     return sendSuccess(res, 201, '날씨 알림이 생성되었습니다', {
       notification,

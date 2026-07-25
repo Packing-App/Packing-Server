@@ -1,0 +1,19 @@
+# Cloud Build로 올릴 소스에서 제외할 것들.
+# 이미지 용량·빌드 시간을 줄이고, 시크릿(.env)이 이미지에 들어가는 것을 막는다.
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+*.env
+logs
+*.log
+.DS_Store
+Dockerfile
+.dockerignore
+render.yaml
+*.md
+cloudflare
+scripts
+.eslintrc.js
+.prettierrc

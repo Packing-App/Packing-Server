@@ -19,8 +19,11 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 }).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    // Try alternative port
+  // 프로덕션(Cloud Run 등)에서는 다른 포트로 폴백하면 안 된다.
+  // Cloud Run은 주입한 PORT(기본 8080)로만 헬스체크를 하므로, 5001로 옮겨 붙으면
+  // 컨테이너가 "떠 있는데도" 헬스체크 실패로 배포가 죽는다. 명확히 죽여서 원인을 드러낸다.
+  if (err.code === 'EADDRINUSE' && process.env.NODE_ENV !== 'production') {
+    // 로컬 개발 편의: 포트가 물려 있으면 대체 포트로 재시도.
     const altPort = 5001;
     logger.error(`Port ${PORT} is busy, trying port ${altPort}...`);
     app.listen(altPort, () => {
@@ -28,6 +31,7 @@ const server = app.listen(PORT, () => {
     });
   } else {
     logger.error(`Error starting server: ${err.message}`);
+    process.exit(1);
   }
 });
 

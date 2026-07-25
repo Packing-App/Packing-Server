@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const passport = require('passport');
+const mongoose = require('mongoose');
 const logger = require('./config/logger');
 // src/app.js에 추가
 const session = require('express-session');
@@ -45,9 +46,21 @@ app.get('/', (req, res) => {
   res.json({ message: 'PackingAPP Server is Running.' });
 });
 
-// Health check endpoint for Render
+// Liveness — 프로세스가 살아있는지. Cloud Run/Render 헬스체크가 이걸 본다.
+// 무조건 200이라 DB 상태와 무관하게 "컨테이너 기동됨"만 알린다.
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
+
+// Readiness — 실제로 요청을 처리할 준비가 됐는지(= MongoDB 연결됨).
+// mongoose.connection.readyState === 1 이면 연결됨. 아니면 503으로 "아직 아님"을 알린다.
+// Cloud Run 롤아웃/모니터링에서 DB 끊김을 감지하는 데 쓴다.
+app.get('/health/ready', (req, res) => {
+  const connected = mongoose.connection.readyState === 1;
+  res.status(connected ? 200 : 503).json({
+    status: connected ? 'ready' : 'not-ready',
+    db: connected ? 'connected' : 'disconnected'
+  });
 });
 
 // 라우트 - 주석 처리 (아직 구현되지 않은 라우트)

@@ -3,6 +3,7 @@ const PackingItem = require('../models/PackingItem');
 const Journey = require('../models/Journey');
 const ThemeTemplate = require('../models/ThemeTemplate');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
+const { isParticipant } = require('../middlewares/journeyAccess');
 const logger = require('../config/logger');
 
 /**
@@ -13,18 +14,7 @@ const logger = require('../config/logger');
 const getPackingItemsByJourney = async (req, res) => {
   try {
     const { journeyId } = req.params;
-
-    // 여행 정보 조회
-    const journey = await Journey.findById(journeyId);
-
-    if (!journey) {
-      return sendError(res, 404, '여행을 찾을 수 없습니다');
-    }
-
-    // 권한 확인 (참가자만 조회 가능)
-    if (!journey.participants.includes(req.user._id)) {
-      return sendError(res, 403, '이 여행의 준비물을 조회할 권한이 없습니다');
-    }
+    // 로드·404·참가자 권한 확인은 loadJourneyRequireParticipant 미들웨어가 처리
 
     // 준비물 조회 (공유 준비물 + 내 개인 준비물)
     const packingItems = await PackingItem.find({
@@ -65,12 +55,12 @@ const createPackingItem = async (req, res) => {
     }
 
     // 권한 확인 (참가자만 생성 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 준비물을 생성할 권한이 없습니다');
     }
 
     // 할당 대상이 있는 경우 참가자 확인
-    if (assignedTo && !journey.participants.includes(assignedTo)) {
+    if (assignedTo && !isParticipant(journey, assignedTo)) {
       return sendError(res, 400, '할당 대상은 여행 참가자여야 합니다');
     }
 
@@ -144,7 +134,7 @@ const createBulkPackingItems = async (req, res) => {
     }
     
     // 권한 확인 (참가자만 생성 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 준비물을 생성할 권한이 없습니다');
     }
     
@@ -260,7 +250,7 @@ const createSelectedRecommendedItems = async (req, res) => {
     }
 
     // 권한 확인 (참가자만 생성 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 준비물을 생성할 권한이 없습니다');
     }
 
@@ -485,18 +475,7 @@ const deletePackingItem = async (req, res) => {
 const getPackingItemsByCategory = async (req, res) => {
   try {
     const { journeyId } = req.params;
-
-    // 여행 정보 조회
-    const journey = await Journey.findById(journeyId);
-
-    if (!journey) {
-      return sendError(res, 404, '여행을 찾을 수 없습니다');
-    }
-
-    // 권한 확인 (참가자만 조회 가능)
-    if (!journey.participants.includes(req.user._id)) {
-      return sendError(res, 403, '이 여행의 준비물을 조회할 권한이 없습니다');
-    }
+    // 로드·404·참가자 권한 확인은 loadJourneyRequireParticipant 미들웨어가 처리
 
     // 준비물 조회 (공유 준비물 + 내 개인 준비물)
     const packingItems = await PackingItem.find({

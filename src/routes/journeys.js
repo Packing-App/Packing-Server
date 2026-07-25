@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth');
+const {
+  loadJourneyRequireParticipant,
+  requireJourneyCreator
+} = require('../middlewares/journeyAccess');
 const journeyController = require('../controllers/journeyController');
 
 // 모든 여행 정보 조회 (사용자의 참여 여행만)
@@ -13,11 +17,23 @@ router.get('/:id', protect, journeyController.getJourneyById);
 // 새로운 여행 생성
 router.post('/', protect, journeyController.createJourney);
 
-// 여행 정보 업데이트
-router.put('/:id', protect, journeyController.updateJourney);
+// 여행 정보 업데이트 (생성자만)
+router.put(
+  '/:id',
+  protect,
+  loadJourneyRequireParticipant,
+  requireJourneyCreator('여행 정보를 수정할 권한이 없습니다'),
+  journeyController.updateJourney
+);
 
-// 여행 삭제
-router.delete('/:id', protect, journeyController.deleteJourney);
+// 여행 삭제 (생성자만)
+router.delete(
+  '/:id',
+  protect,
+  loadJourneyRequireParticipant,
+  requireJourneyCreator('여행을 삭제할 권한이 없습니다'),
+  journeyController.deleteJourney
+);
 
 // 여행 참가자 추가 (친구 초대)
 router.post('/:id/participants', protect, journeyController.inviteParticipant);

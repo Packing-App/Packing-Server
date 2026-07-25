@@ -2,10 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth');
+const { loadJourneyRequireParticipant } = require('../middlewares/journeyAccess');
 const packingItemController = require('../controllers/packingItemController');
 
 // 여행별 준비물 목록 조회
-router.get('/journey/:journeyId', protect, packingItemController.getPackingItemsByJourney);
+router.get(
+  '/journey/:journeyId',
+  protect,
+  loadJourneyRequireParticipant,
+  packingItemController.getPackingItemsByJourney
+);
 
 // 준비물 생성
 router.post('/', protect, packingItemController.createPackingItem);
@@ -26,7 +32,12 @@ router.put('/:id/toggle', protect, packingItemController.togglePackingItem);
 router.delete('/:id', protect, packingItemController.deletePackingItem);
 
 // 카테고리별 준비물 조회
-router.get('/categories/:journeyId', protect, packingItemController.getPackingItemsByCategory);
+router.get(
+  '/categories/:journeyId',
+  protect,
+  loadJourneyRequireParticipant,
+  packingItemController.getPackingItemsByCategory
+);
 
 // 테마별 준비물 템플릿 목록 조회
 router.get('/templates', protect, packingItemController.getThemeTemplates);

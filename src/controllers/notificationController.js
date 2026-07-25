@@ -4,6 +4,7 @@ const Journey = require('../models/Journey');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const { getWeatherData, analyzeWeatherCondition } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
+const { isParticipant } = require('../middlewares/journeyAccess');
 const logger = require('../config/logger');
 
 /**
@@ -127,7 +128,7 @@ const createJourneyReminder = async (req, res) => {
     }
 
     // 권한 확인 (참가자만 알림 생성 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 알림을 생성할 권한이 없습니다');
     }
 
@@ -173,7 +174,7 @@ const createWeatherAlert = async (req, res) => {
     }
 
     // 권한 확인 (참가자만 알림 생성 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 알림을 생성할 권한이 없습니다');
     }
 

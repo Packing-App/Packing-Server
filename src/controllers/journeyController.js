@@ -7,6 +7,7 @@ const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
+const { isParticipant, isCreator } = require('../middlewares/journeyAccess');
 
 /**
  * 사용자의 여행 목록 조회
@@ -43,9 +44,7 @@ const getJourneyById = async (req, res) => {
     }
 
     // 참여자 확인 (보안 검사)
-    if (!journey.participants.some(participant => 
-      participant._id.toString() === req.user._id.toString()
-    )) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행에 접근할 권한이 없습니다');
     }
 
@@ -127,16 +126,8 @@ const createJourney = async (req, res) => {
  */
 const updateJourney = async (req, res) => {
   try {
-    const journey = await Journey.findById(req.params.id);
-
-    if (!journey) {
-      return sendError(res, 404, '여행을 찾을 수 없습니다');
-    }
-
-    // 권한 확인 (생성자만 수정 가능)
-    if (journey.creatorId.toString() !== req.user._id.toString()) {
-      return sendError(res, 403, '여행 정보를 수정할 권한이 없습니다');
-    }
+    // 로드·404·생성자 권한 확인은 loadJourneyRequireParticipant + requireJourneyCreator 미들웨어가 처리
+    const journey = req.journey;
 
     const {
       title, 
@@ -195,16 +186,8 @@ const updateJourney = async (req, res) => {
  */
 const deleteJourney = async (req, res) => {
   try {
-    const journey = await Journey.findById(req.params.id);
-
-    if (!journey) {
-      return sendError(res, 404, '여행을 찾을 수 없습니다');
-    }
-
-    // 권한 확인 (생성자만 삭제 가능)
-    if (journey.creatorId.toString() !== req.user._id.toString()) {
-      return sendError(res, 403, '여행을 삭제할 권한이 없습니다');
-    }
+    // 로드·404·생성자 권한 확인은 미들웨어가 처리
+    const journey = req.journey;
 
     // 여행 삭제
     await journey.deleteOne();
@@ -236,7 +219,7 @@ const inviteParticipant = async (req, res) => {
     }
 
     // 권한 확인 (여행 참가자만 초대 가능)
-    if (!journey.participants.includes(req.user._id)) {
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행에 참가자를 초대할 권한이 없습니다');
     }
 
@@ -264,7 +247,7 @@ const inviteParticipant = async (req, res) => {
     }
 
     // 이미 참가자인 경우 확인
-    if (journey.participants.includes(invitedUser._id)) {
+    if (isParticipant(journey, invitedUser._id)) {
       return sendError(res, 400, '이미 여행에 참가 중인 사용자입니다');
     }
 
@@ -302,9 +285,9 @@ const removeParticipant = async (req, res) => {
 
     // 본인이 나가는 경우 또는 여행 생성자가 참가자 제거하는 경우 확인
     const isSelfRemoval = userIdToRemove === req.user._id.toString();
-    const isCreator = journey.creatorId.toString() === req.user._id.toString();
+    const userIsCreator = isCreator(journey, req.user._id);
 
-    if (!isSelfRemoval && !isCreator) {
+    if (!isSelfRemoval && !userIsCreator) {
       return sendError(res, 403, '참가자를 제거할 권한이 없습니다');
     }
 
@@ -323,7 +306,7 @@ const removeParticipant = async (req, res) => {
     );
 
     // 생성자가 나가는 경우 여행 삭제
-    if (isSelfRemoval && isCreator) {
+    if (isSelfRemoval && userIsCreator) {
       await journey.deleteOne();
       // 관련 알림 및 패킹 아이템 삭제 로직 추가 필요
       return sendSuccess(res, 200, '여행이 성공적으로 삭제되었습니다');
@@ -380,8 +363,8 @@ const respondToInvitation = async (req, res) => {
 
     // 수락한 경우 참가자 추가
     if (accept) {
-      // 이미 참가자인 경우 확인
-      if (!journey.participants.includes(req.user._id)) {
+      // 이미 참가자가 아니면 추가
+      if (!isParticipant(journey, req.user._id)) {
         journey.participants.push(req.user._id);
         await journey.save();
       }
@@ -425,11 +408,8 @@ const getRecommendations = async (req, res) => {
       return sendError(res, 404, '여행을 찾을 수 없습니다');
     }
 
-    // 권한 확인 (참가자만 추천 조회 가능). participants는 populate돼 있어 _id로 비교.
-    const isParticipant = journey.participants.some(
-      p => p._id.toString() === req.user._id.toString()
-    );
-    if (!isParticipant) {
+    // 권한 확인 (참가자만 추천 조회 가능)
+    if (!isParticipant(journey, req.user._id)) {
       return sendError(res, 403, '이 여행의 준비물을 조회할 권한이 없습니다');
     }
 

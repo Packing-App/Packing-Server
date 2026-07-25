@@ -9,7 +9,7 @@
 // ⚠️ ORIGIN 은 Cloud Run 배포(gcp-deploy.sh) 출력의 서비스 URL에서 https:// 를 뺀
 //    호스트만 넣는다. 예: packing-server-xxxxxxxxxxxx.asia-northeast3.run.app
 
-const ORIGIN = "__CLOUD_RUN_HOST__";
+const ORIGIN = "packing-server-scahushohq-du.a.run.app";
 
 export default {
   async fetch(request) {

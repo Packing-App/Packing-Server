@@ -10,6 +10,12 @@ const { notifyUser } = require('../services/notificationService');
 const { isParticipant, isCreator } = require('../middlewares/journeyAccess');
 const { generateInviteCode } = require('../utils/inviteCode');
 
+// 초대 링크의 공개 도메인.
+// iOS 앱 entitlement(`applinks:packing-api.iyungui.dev`)에 박혀 있는 값과 반드시 같아야
+// 유니버설 링크가 걸린다. 요청 헤더에서 뽑으면 안 된다 — Cloudflare Worker가 Cloud Run으로
+// 프록시하면서 Host를 `*.run.app`으로 바꿔 보내기 때문에 앱이 안 여는 링크가 나간다.
+const INVITE_LINK_ORIGIN = 'https://packing-api.iyungui.dev';
+
 /**
  * 사용자의 여행 목록 조회
  * @route GET /api/journeys
@@ -474,10 +480,9 @@ const getInviteLink = async (req, res) => {
       await journey.save();
     }
 
-    // 초대 링크는 AASA를 서빙하는 호스트와 같아야 유니버설 링크가 걸린다.
     // CLIENT_URL은 `/api` 접미사가 붙은 API 베이스라 여기 쓰면 `/api/join/<code>`가 되어
-    // 랜딩(404)도 AASA의 paths(`/join/*`)도 못 맞춘다. 요청 호스트에서 그대로 만든다.
-    const inviteUrl = `https://${req.get('host')}/join/${journey.inviteCode}`;
+    // 랜딩(404)도 AASA의 paths(`/join/*`)도 못 맞춘다.
+    const inviteUrl = `${INVITE_LINK_ORIGIN}/join/${journey.inviteCode}`;
 
     return sendSuccess(res, 200, '초대 링크가 생성되었습니다', {
       inviteCode: journey.inviteCode,

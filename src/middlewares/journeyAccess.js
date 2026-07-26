@@ -3,6 +3,7 @@
 // 컨트롤러마다 흩어져 있던 "findById → 404 → 참가자/생성자 확인" 3단 패턴 중복을 줄인다.
 const Journey = require('../models/Journey');
 const { sendError } = require('../utils/responseHelper');
+const { isValidObjectId } = require('./validators');
 const logger = require('../config/logger');
 
 // participants가 populate됐든(문서) 아니든(ObjectId) 안전하게 비교한다.
@@ -19,6 +20,10 @@ const loadJourneyRequireParticipant = async (req, res, next) => {
     const journeyId = req.params.id || req.params.journeyId || req.body.journeyId;
     if (!journeyId) {
       return sendError(res, 400, '여행 ID를 입력해주세요');
+    }
+    // body로 들어온 journeyId는 router.param 검증을 거치지 않으므로 여기서 형식을 본다
+    if (!isValidObjectId(journeyId)) {
+      return sendError(res, 400, '잘못된 여행 ID 형식입니다');
     }
 
     const journey = await Journey.findById(journeyId);

@@ -2,7 +2,11 @@
 const express = require('express');
 const userController = require('../controllers/userController');
 const { protect } = require('../middlewares/auth');
+const { validateObjectIdParam } = require('../middlewares/validators');
 const router = express.Router();
+
+// :id가 ObjectId 형식이 아니면 컨트롤러 전에 400으로 끊는다
+router.param('id', validateObjectIdParam);
 
 // AWS S3 설정
 const AWS = require('aws-sdk');

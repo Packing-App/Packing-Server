@@ -3,7 +3,12 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth');
 const { loadJourneyRequireParticipant } = require('../middlewares/journeyAccess');
+const { validateObjectIdParam } = require('../middlewares/validators');
 const packingItemController = require('../controllers/packingItemController');
+
+// :id, :journeyId가 ObjectId 형식이 아니면 컨트롤러 전에 400으로 끊는다
+router.param('id', validateObjectIdParam);
+router.param('journeyId', validateObjectIdParam);
 
 // 여행별 준비물 목록 조회
 router.get(

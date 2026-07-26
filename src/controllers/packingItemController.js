@@ -4,6 +4,7 @@ const Journey = require('../models/Journey');
 const ThemeTemplate = require('../models/ThemeTemplate');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const { isParticipant } = require('../middlewares/journeyAccess');
+const { isValidObjectId } = require('../middlewares/validators');
 const logger = require('../config/logger');
 
 /**
@@ -45,6 +46,9 @@ const createPackingItem = async (req, res) => {
 
     if (!journeyId || !name || !category) {
       return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    }
+    if (!isValidObjectId(journeyId)) {
+      return sendError(res, 400, '잘못된 여행 ID 형식입니다');
     }
 
     // 여행 정보 조회
@@ -121,7 +125,8 @@ const createBulkPackingItems = async (req, res) => {
     const { journeyId, names, categories, mergeDuplicates = true } = req.body;
     
     // 유효성 검사
-    if (!journeyId || !names || !Array.isArray(names) || names.length === 0 || 
+    if (!journeyId || !isValidObjectId(journeyId) ||
+        !names || !Array.isArray(names) || names.length === 0 ||
         !categories || !Array.isArray(categories) || categories.length === 0 ||
         names.length !== categories.length) {
       return sendError(res, 400, '유효한 여행 ID와 준비물 이름 및 카테고리 목록이 필요합니다');
@@ -240,6 +245,9 @@ const createSelectedRecommendedItems = async (req, res) => {
 
     if (!journeyId || !selectedItems || !selectedItems.length) {
       return sendError(res, 400, '모든 필수 정보를 입력해주세요');
+    }
+    if (!isValidObjectId(journeyId)) {
+      return sendError(res, 400, '잘못된 여행 ID 형식입니다');
     }
 
     // 여행 정보 조회

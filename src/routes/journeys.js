@@ -6,7 +6,12 @@ const {
   loadJourneyRequireParticipant,
   requireJourneyCreator
 } = require('../middlewares/journeyAccess');
+const { validateObjectIdParam } = require('../middlewares/validators');
 const journeyController = require('../controllers/journeyController');
+
+// :id, :userId가 ObjectId 형식이 아니면 컨트롤러 전에 400으로 끊는다
+router.param('id', validateObjectIdParam);
+router.param('userId', validateObjectIdParam);
 
 // 모든 여행 정보 조회 (사용자의 참여 여행만)
 router.get('/', protect, journeyController.getJourneys);

@@ -5,6 +5,7 @@ const { sendSuccess, sendError } = require('../utils/responseHelper');
 const { getWeatherData, analyzeWeatherCondition } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
 const { isParticipant } = require('../middlewares/journeyAccess');
+const { isValidObjectId } = require('../middlewares/validators');
 const logger = require('../config/logger');
 
 /**
@@ -119,6 +120,9 @@ const createJourneyReminder = async (req, res) => {
     if (!journeyId) {
       return sendError(res, 400, '여행 ID를 입력해주세요');
     }
+    if (!isValidObjectId(journeyId)) {
+      return sendError(res, 400, '잘못된 여행 ID 형식입니다');
+    }
 
     // 여행 정보 조회
     const journey = await Journey.findById(journeyId);
@@ -164,6 +168,9 @@ const createWeatherAlert = async (req, res) => {
 
     if (!journeyId) {
       return sendError(res, 400, '여행 ID를 입력해주세요');
+    }
+    if (!isValidObjectId(journeyId)) {
+      return sendError(res, 400, '잘못된 여행 ID 형식입니다');
     }
 
     // 여행 정보 조회

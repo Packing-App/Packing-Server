@@ -2,7 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth');
+const { validateObjectIdParam } = require('../middlewares/validators');
 const friendshipController = require('../controllers/friendshipController');
+
+// :id가 ObjectId 형식이 아니면 컨트롤러 전에 400으로 끊는다
+router.param('id', validateObjectIdParam);
 
 // 친구 목록 조회
 router.get('/', protect, friendshipController.getFriends);

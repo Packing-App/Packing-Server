@@ -11,9 +11,13 @@ const {
   getUnreadNotificationsCount
 } = require('../controllers/notificationController');
 const { protect } = require('../middlewares/auth');
+const { validateObjectIdParam } = require('../middlewares/validators');
 
 // 모든 라우트에 인증 필요
 router.use(protect);
+
+// :id가 ObjectId 형식이 아니면 컨트롤러 전에 400으로 끊는다
+router.param('id', validateObjectIdParam);
 
 router.get('/', getUserNotifications);
 router.put('/:id/read', markNotificationAsRead);

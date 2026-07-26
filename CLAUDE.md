@@ -38,6 +38,26 @@ routes/ → middlewares/ → controllers/ → services/ → models/
 - **응답 메시지·주석은 한국어**가 관례.
 - **환경변수는 필수화**: 시크릿에 하드코딩 폴백을 두지 않는다. 필요한 env가 없으면 부팅을 실패시킨다.
 
+## 배포
+
+`dev` → `main` 병합 후 **로컬에서 수동 실행**한다. CI 없음.
+
+```bash
+./scripts/gcp-deploy.sh              # Cloud Run 배포 (소스를 Cloud Build로 올려 빌드, 로컬 Docker 불필요)
+./scripts/gcp-setup-secrets.sh       # 최초 1회 / 시크릿 추가 시에만
+cd cloudflare && npx wrangler deploy # 앞단 프록시. 백엔드 주소가 바뀔 때만
+```
+
+설정값은 전부 `scripts/gcp-config.sh` 한 곳에 있다 — GCP 프로젝트 `packing-503507`, 리전 `asia-northeast3`(서울), 서비스 `packing-server`.
+`.env`의 값 중 `SECRET_KEYS`는 Secret Manager로, `PLAIN_KEYS`는 평문 환경변수로 주입된다. **새 env를 추가하면 이 배열에도 넣어야 배포본에 반영된다.**
+
+### 공개 주소 — 함정 2개
+
+앱이 보는 주소는 `https://packing-api.iyungui.dev`이고, 그 뒤에 Cloudflare Worker(`cloudflare/src/index.js`)가 Cloud Run으로 프록시한다.
+
+- ⚠️ **`req.get('host')`로 공개 URL을 만들지 않는다.** Worker가 프록시하면서 Host를 `*.run.app`으로 재작성하기 때문에, 그렇게 만든 링크는 외부에서 열리지 않는다(유니버설 링크는 아예 앱이 안 열린다). 공개 URL은 **`src/config/appLinks.js`의 `PUBLIC_ORIGIN` 상수**를 쓴다. 원래 호스트가 정말 필요하면 Worker가 넣어주는 `X-Forwarded-Host`를 본다.
+- ⚠️ **`CLIENT_URL` env는 이름과 달리 API 베이스**(`https://packing-api.iyungui.dev/api`)다. 공개 링크 생성에 쓰면 `/api/join/<code>` 같은 잘못된 주소가 나간다. 현재 정당한 사용처는 `src/socket/socketSetup.js`의 CORS origin뿐.
+
 ## 외부 연동
 
 날씨(OpenWeather), 이미지(Unsplash), 저장소(AWS S3), 이메일(SendGrid), 푸시(APNs), 소셜로그인(Google/Kakao/Naver/Apple, Passport). 키는 `.env`(gitignore됨).

@@ -17,39 +17,91 @@ npm run format     # Prettier
 
 Node 버전: `>=18 <23` (package.json engines).
 
-## 아키텍처 — 계층 흐름
+## 라우팅 — 관례와 다른 점 2개
 
-요청은 항상 이 순서로 흐른다. 새 기능도 이 계층을 따른다.
+디렉터리 구조(`routes/` → `controllers/` → `services/` → `models/`)는 Express 관례 그대로다.
+관례로 짐작할 수 없는 건 이 둘뿐이다.
 
+- **`app.js`가 모든 라우터를 `/api/*`와 `/*`(접두사 없음) 양쪽에 마운트한다**(`src/app.js:140-157`).
+  iOS 클라이언트 호환 때문이다. **라우터를 추가하면 두 블록 다 등록해야 한다.**
+- 인증이 필요한 라우트에는 `src/middlewares/auth.js`의 `protect`를 건다.
+
+## 재사용 자산 — 새로 짜기 전에 여기부터
+
+### 여행 접근 권한 — `src/middlewares/journeyAccess.js`
+
+**여행 관련 라우트를 추가할 때 참가자·생성자 검증을 손으로 다시 짜지 말고 이걸 쓴다.**
+
+- `loadJourneyRequireParticipant` (`:17`) — journeyId를 `params.id` → `params.journeyId` →
+  `body.journeyId` 순으로 찾아 여행을 로드한다. 없으면 404, 참가자가 아니면 403.
+  로드된 문서를 **`req.journey`에 주입**하므로 컨트롤러에서 다시 조회할 필요가 없다.
+- `requireJourneyCreator(message?)` (`:41`) — 위 미들웨어 **뒤에** 걸어 생성자만 통과시킨다.
+- `isParticipant` / `isCreator` — populate 여부와 무관하게 안전 비교하는 헬퍼.
+  컨트롤러 안에서 직접 판정할 때 쓴다(raw ObjectId 배열의 `.includes`는 어긋날 수 있다).
+
+사용례: `src/routes/journeys.js`, `src/routes/packingItems.js`.
+
+### 알림 — `notifyUser` (`src/services/notificationService.js:22`)
+
+알림 생성의 **단일 진입점**. 알림을 추가할 땐 반드시 여기를 통과시킨다(Notification 문서 생성과
+푸시 발송이 여기서 함께 처리된다).
+
+```js
+notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
 ```
-routes/ → middlewares/ → controllers/ → services/ → models/
-```
 
-- **routes/** (`src/routes/`): 엔드포인트 정의. 인증 필요 라우트는 `middlewares/auth.js`의 `protect`를 건다. `app.js`가 `/api/*`와 `/*`(접두사 없음) 양쪽에 마운트한다(iOS 호환).
-- **controllers/** (`src/controllers/`): 요청 파싱·검증·응답. 비즈니스 로직이 무거워지면 service로 뺀다.
-- **services/** (`src/services/`): 도메인 로직(추천·이메일·푸시). 순수 로직은 순수하게 유지해 테스트 가능하게 둔다.
-- **models/** (`src/models/`): Mongoose 스키마. 검증·pre 훅을 스키마 레벨에 둔다.
+사용 중: `src/utils/scheduler.js:85,181,246`, `src/controllers/notificationController.js:6`.
+
+### 실시간 — `src/socket/socketSetup.js`
+
+`io.emit`을 직접 짜지 말고 헬퍼를 쓴다.
+
+- `sendNotification(io, userId, notification)` (`:96`)
+- `sendParticipantUpdate(io, journeyId, data)` (`:109`)
+- `sendPackingItemUpdate(io, journeyId, item)` (`:122`)
+
+⚠️ iOS 앱은 현재 소켓에 접속하지 않는다(순수 REST). 소켓이 실제로 쓰일 때의 인프라 제약은
+[DEPLOYMENT.md](DEPLOYMENT.md)의 "인프라 제약" 참조.
+
+### `src/utils/`
+
+| 파일 | 쓰임 |
+|---|---|
+| `responseHelper.js` | `sendSuccess` / `sendError` — 아래 규약 |
+| `jwt.js` | `generateAccessToken` / `generateRefreshToken` / `verifyToken` |
+| `appleAuth.js` | `createAppleClientSecret` — Apple 네이티브 로그인 검증용 |
+| `locationUtils.js` | `processCityName` / `translateCityName` / `initCityList` / `searchCities`. `src/data/cityTranslations.js`(한↔영 도시·국가 매핑) 기반 |
+| `externalApiUtils.js` | `getWeatherData` / `analyzeWeatherCondition` / `getDestinationImage` |
+| `inviteCode.js` | `generateInviteCode` — 혼동되는 글자(I/L/O/0/1) 제외 알파벳. 테스트 있음 |
+| `scheduler.js` | `initSchedulers` — node-cron 정기 알림(매일 09시·08시, 매주 월 10시) |
+
+특히 `scheduler.js`와 `inviteCode.js`는 모르고 다시 만들기 쉬우니 먼저 확인한다.
 
 ## 규약 (반드시 따를 것)
 
-- **응답은 responseHelper로 통일**: `src/utils/responseHelper.js`의 `sendSuccess(res, status, message, data)` / `sendError(res, status, message)`를 쓴다. `res.json`을 직접 부르지 않는다.
+- **응답은 responseHelper로 통일**: `src/utils/responseHelper.js`의
+  `sendSuccess(res, statusCode, message, data = null)` /
+  `sendError(res, statusCode, message, errors = null)`를 쓴다.
+  라우트 핸들러에서 `res.json`을 직접 부르지 않는다.
+  **정당한 예외는 `src/app.js`의 인프라 응답뿐** — 루트(`:58`), `/health`(`:64`),
+  `/health/ready`(`:72`), AASA(`:82`), 최종 에러 핸들러(`:163`). 이들은 API 응답 규격
+  (`{ success, message, data }`)을 따르지 않는 게 맞다.
 - **로깅은 winston**: `require('./config/logger')`의 `logger.info/warn/error`. `console.log` 금지.
-- **에러는 던지고 중앙에서**: 최종 에러 핸들러가 `app.js`에 있다. 컨트롤러에서는 try/catch 후 `sendError` 또는 next(err).
-- **응답 메시지·주석은 한국어**가 관례.
-- **환경변수는 필수화**: 시크릿에 하드코딩 폴백을 두지 않는다. 필요한 env가 없으면 부팅을 실패시킨다.
+- **에러는 던지고 중앙에서**: 최종 에러 핸들러가 `app.js`에 있다. 컨트롤러에서는 try/catch 후
+  `sendError` 또는 `next(err)`.
+- **언어는 기본 한국어**(응답 메시지·주석). 다만 일부 응답은 `src/localization/messages.js`(ko/en)로
+  분기한다 — 현재 사용처는 `src/controllers/packingItemController.js:539,557`.
+  ⚠️ `req.lang`을 세팅하는 `src/middlewares/localization.js`는 **`app.js`에 마운트돼 있지 않아**
+  실질적으로 항상 ko로 떨어진다. 다국어를 실제로 켜려면 이 미들웨어부터 마운트해야 한다.
 
 ## 배포
 
-`dev` → `main` 병합 후 **로컬에서 수동 실행**한다. CI 없음.
+절차·운영 명령·콘솔 수동 단계·비용 가드는 전부 [DEPLOYMENT.md](DEPLOYMENT.md)에 있다.
+코드를 쓸 때 알아야 하는 것만 여기 남긴다.
 
-```bash
-./scripts/gcp-deploy.sh              # Cloud Run 배포 (소스를 Cloud Build로 올려 빌드, 로컬 Docker 불필요)
-./scripts/gcp-setup-secrets.sh       # 최초 1회 / 시크릿 추가 시에만
-cd cloudflare && npx wrangler deploy # 앞단 프록시. 백엔드 주소가 바뀔 때만
-```
-
-설정값은 전부 `scripts/gcp-config.sh` 한 곳에 있다 — GCP 프로젝트 `packing-503507`, 리전 `asia-northeast3`(서울), 서비스 `packing-server`.
-`.env`의 값 중 `SECRET_KEYS`는 Secret Manager로, `PLAIN_KEYS`는 평문 환경변수로 주입된다. **새 env를 추가하면 이 배열에도 넣어야 배포본에 반영된다.**
+**`.env`에 새 env를 추가하면 `scripts/gcp-config.sh`의 `SECRET_KEYS`(→Secret Manager) 또는
+`PLAIN_KEYS`(→평문 환경변수) 배열에도 넣어야 배포본에 반영된다.** 안 넣으면 로컬에서만 동작하고
+Cloud Run에서는 `undefined`가 된다.
 
 ### 공개 주소 — 함정 2개
 
@@ -60,9 +112,11 @@ cd cloudflare && npx wrangler deploy # 앞단 프록시. 백엔드 주소가 바
 
 ## 외부 연동
 
-날씨(OpenWeather), 이미지(Unsplash), 저장소(AWS S3), 이메일(SendGrid), 푸시(APNs), 소셜로그인(Google/Kakao/Naver/Apple, Passport). 키는 `.env`(gitignore됨).
+날씨·이미지·저장소·이메일·푸시·소셜로그인(Google/Kakao/Naver/Apple)을 쓴다.
+구체적인 SDK·서비스는 `package.json` 의존성을 보면 된다. 키는 전부 `.env`(gitignore됨).
 
 ## 테스트 정책
 
-- 대상 우선순위: **순수함수 먼저**(예: `services/itemRecommendationService.js`의 기간·교통·병합 로직). DB/외부 API 의존 함수는 목킹 비용이 크므로 필요할 때만.
+- 대상 우선순위: **순수함수 먼저**(예: `services/itemRecommendationService.js`의 기간·교통·병합 로직).
+  DB/외부 API 의존 함수는 목킹 비용이 크므로 필요할 때만.
 - 테스트 위치: `src/**/__tests__/*.test.js`.

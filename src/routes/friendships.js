@@ -19,7 +19,7 @@ router.put('/requests/:id', protect, friendshipController.respondToFriendRequest
 // 친구 삭제
 router.delete('/:id', protect, friendshipController.removeFriend);
 
-// 이메일로 친구 검색
-router.get('/search', protect, friendshipController.searchFriendByEmail);
+// 친구 코드로 사용자 검색
+router.get('/search', protect, friendshipController.searchFriendByCode);
 
 module.exports = router;

@@ -2,6 +2,7 @@
 const User = require('../models/User');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
+const { generateInviteCode } = require('../utils/inviteCode');
 const AWS = require('aws-sdk');
 
 // S3 인스턴스 생성
@@ -21,6 +22,24 @@ const getMyProfile = async (req, res) => {
     // req.user는 인증 미들웨어에서 설정됨
     const user = req.user;
 
+    // 친구 코드 지연 발급 — 기존 사용자는 이 시점에 코드를 갖게 된다
+    if (!user.friendCode) {
+      for (let i = 0; i < 5; i++) {
+        const code = generateInviteCode();
+        if (!(await User.exists({ friendCode: code }))) {
+          user.friendCode = code;
+          break;
+        }
+      }
+
+      if (!user.friendCode) {
+        logger.error('친구 코드 생성 실패: 5회 연속 충돌');
+        return sendError(res, 500, '프로필 조회 중 오류가 발생했습니다');
+      }
+
+      await user.save();
+    }
+
     // 필요한 사용자 정보만 반환
     const userData = {
       _id: user._id,
@@ -28,6 +47,7 @@ const getMyProfile = async (req, res) => {
       email: user.email,
       profileImage: user.profileImage,
       intro: user.intro,
+      friendCode: user.friendCode,
       socialType: user.socialType,
       isEmailVerified: user.isEmailVerified
     };

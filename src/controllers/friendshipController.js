@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 const { notifyUser } = require('../services/notificationService');
+const { normalizeCode, isValidCode } = require('../utils/inviteCode');
 
 /**
  * 친구 목록 조회
@@ -89,17 +90,17 @@ const getFriendRequests = async (req, res) => {
  */
 const sendFriendRequest = async (req, res) => {
   try {
-    const { email } = req.body;
+    const friendCode = normalizeCode(req.body.friendCode);
 
-    if (!email) {
-      return sendError(res, 400, '친구 요청을 보낼 사용자의 이메일을 입력해주세요');
+    if (!isValidCode(friendCode)) {
+      return sendError(res, 400, '올바른 친구 코드 형식이 아닙니다');
     }
 
-    // 이메일로 사용자 찾기
-    const receiver = await User.findOne({ email });
+    // 친구 코드로 사용자 찾기
+    const receiver = await User.findOne({ friendCode });
 
     if (!receiver) {
-      return sendError(res, 404, '해당 이메일을 가진 사용자를 찾을 수 없습니다');
+      return sendError(res, 404, '해당 코드를 가진 사용자를 찾을 수 없습니다');
     }
 
     // 자기 자신에게 요청 방지
@@ -269,50 +270,46 @@ const removeFriend = async (req, res) => {
 };
 
 /**
- * 이메일로 친구 검색
- * @route GET /api/friendships/search
+ * 친구 코드로 사용자 검색
+ * @route GET /api/friendships/search?code=XXXXXXXX
  * @access Private
+ *
+ * 코드 정확일치만 허용한다. 이메일 부분검색을 쓰던 시절엔 `apple` 한 단어로
+ * Apple 로그인 사용자 전원이 열거됐다. 이메일은 응답에 담지 않는다.
  */
-const searchFriendByEmail = async (req, res) => {
+const searchFriendByCode = async (req, res) => {
   try {
-    const { email } = req.query;
+    const code = normalizeCode(req.query.code);
 
-    if (!email) {
-      return sendError(res, 400, '검색할 이메일을 입력해주세요');
+    if (!isValidCode(code)) {
+      return sendError(res, 400, '올바른 친구 코드 형식이 아닙니다');
     }
 
-    // 이메일로 사용자 찾기 (부분 일치 검색)
-    const users = await User.find({ 
-      email: { $regex: email, $options: 'i' },
+    const user = await User.findOne({
+      friendCode: code,
       _id: { $ne: req.user._id } // 자기 자신 제외
-    }).select('name email profileImage');
+    }).select('name profileImage intro');
 
-    // if (!users.length) {
-    //   return sendError(res, 404, '해당 이메일을 가진 사용자를 찾을 수 없습니다');
-    // }
+    if (!user) {
+      return sendSuccess(res, 200, '검색 결과가 없습니다', null);
+    }
 
     // 기존 친구 관계 확인
-    const friendshipStatuses = await Promise.all(
-      users.map(async (user) => {
-        const friendship = await Friendship.findOne({
-          $or: [
-            { requesterId: req.user._id, receiverId: user._id },
-            { requesterId: user._id, receiverId: req.user._id }
-          ]
-        });
+    const friendship = await Friendship.findOne({
+      $or: [
+        { requesterId: req.user._id, receiverId: user._id },
+        { requesterId: user._id, receiverId: req.user._id }
+      ]
+    });
 
-        return {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          profileImage: user.profileImage,
-          friendshipStatus: friendship ? friendship.status : null,
-          friendshipId: friendship ? friendship._id : null
-        };
-      })
-    );
-
-    return sendSuccess(res, 200, '사용자 검색 결과입니다', friendshipStatuses);
+    return sendSuccess(res, 200, '사용자 검색 결과입니다', {
+      _id: user._id,
+      name: user.name,
+      profileImage: user.profileImage,
+      intro: user.intro,
+      friendshipStatus: friendship ? friendship.status : null,
+      friendshipId: friendship ? friendship._id : null
+    });
   } catch (error) {
     logger.error(`친구 검색 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');
@@ -325,5 +322,5 @@ module.exports = {
   sendFriendRequest,
   respondToFriendRequest,
   removeFriend,
-  searchFriendByEmail
+  searchFriendByCode
 };

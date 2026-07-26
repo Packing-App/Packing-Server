@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema(
       maxlength: [200, '자기소개는 200자 이내로 입력해주세요'],
       default: null
     },
+    friendCode: { // 친구 검색용 8자 코드. 최초 프로필 조회 시 지연 발급된다
+      type: String,
+      default: null
+    },
     socialType: { // 소셜 로그인 타입
       type: String,
       enum: ['email', 'kakao', 'naver', 'google', 'apple'],
@@ -92,6 +96,14 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true  // createdAt, updatedAt 필드 추가
   }
+);
+
+// 친구 코드 유니크 인덱스.
+// sparse는 필드 누락만 건너뛰고 null은 색인하므로, default: null과 함께 쓰면
+// 코드가 없는 사용자 두 명째에서 중복키가 난다. 부분 인덱스로 문자열만 색인한다.
+userSchema.index(
+  { friendCode: 1 },
+  { unique: true, partialFilterExpression: { friendCode: { $type: 'string' } } }
 );
 
 // 비밀번호 해싱 미들웨어

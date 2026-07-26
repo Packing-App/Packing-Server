@@ -72,10 +72,29 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
 | `appleAuth.js` | `createAppleClientSecret` — Apple 네이티브 로그인 검증용 |
 | `locationUtils.js` | `processCityName` / `translateCityName` / `initCityList` / `searchCities`. `src/data/cityTranslations.js`(한↔영 도시·국가 매핑) 기반 |
 | `externalApiUtils.js` | `getWeatherData` / `analyzeWeatherCondition` / `getDestinationImage` |
-| `inviteCode.js` | `generateInviteCode` — 혼동되는 글자(I/L/O/0/1) 제외 알파벳. 테스트 있음 |
+| `inviteCode.js` | `generateInviteCode` / `normalizeCode` / `isValidCode` — 혼동되는 글자(I/L/O/0/1) 제외 알파벳. 여행 초대 코드와 친구 코드가 공유한다. 테스트 있음 |
 | `scheduler.js` | `initSchedulers` — node-cron 정기 알림(매일 09시·08시, 매주 월 10시) |
 
 특히 `scheduler.js`와 `inviteCode.js`는 모르고 다시 만들기 쉬우니 먼저 확인한다.
+
+### 8자 코드 — 여행 초대 코드 / 친구 코드
+
+둘 다 `inviteCode.js`의 같은 알파벳(`ABCDEFGHJKMNPQRSTUVWXYZ23456789`)을 쓴다.
+
+- **사용자 입력 코드는 반드시 `normalizeCode` → `isValidCode`를 거친다.** 정규식 메타문자와 길이 이상 입력이
+  여기서 걸린다. 친구 검색이 `$regex`로 회원 명부를 열거당한 원인이 이 검증의 부재였다.
+- 형식 정규식은 **`ALPHABET`에서 파생**시킨다. 손으로 쓴 범위(`A-HJ-N` 등)는 `L`을 다시 끌어들여
+  알파벳과 어긋난다 — 실제로 그런 적이 있다.
+- **발급은 지연 발급이다.** 여행은 `getInviteLink` 호출 시(`journeyController.js`), 친구 코드는
+  `getMyProfile` 호출 시(`userController.js`) 발급된다. 마이그레이션 스크립트는 없다.
+
+⚠️ **코드 필드의 유니크 인덱스에 `sparse`를 쓰지 않는다.** sparse는 *필드 누락*만 건너뛰고
+`null`은 색인하므로, `default: null`과 함께 쓰면 코드가 없는 문서 **두 개째에서 E11000**이 난다.
+`partialFilterExpression: { <필드>: { $type: 'string' } }`를 쓴다. `Journey.inviteCode`가
+실제로 이 함정에 빠졌었다(2026-07-26 수정, 운영 인덱스 재생성 필요했음).
+
+⚠️ **mongoose는 이름이 같은 기존 인덱스를 고쳐주지 않는다.** 인덱스 옵션을 바꾸면 배포 전에
+운영 DB에서 기존 인덱스를 드롭해야 하고, 안 하면 `autoIndex`가 조용히 실패한다.
 
 ## 규약 (반드시 따를 것)
 

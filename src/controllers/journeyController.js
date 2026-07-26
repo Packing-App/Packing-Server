@@ -474,8 +474,10 @@ const getInviteLink = async (req, res) => {
       await journey.save();
     }
 
-    const baseUrl = process.env.CLIENT_URL || 'https://packing-api.iyungui.dev';
-    const inviteUrl = `${baseUrl}/join/${journey.inviteCode}`;
+    // 초대 링크는 AASA를 서빙하는 호스트와 같아야 유니버설 링크가 걸린다.
+    // CLIENT_URL은 `/api` 접미사가 붙은 API 베이스라 여기 쓰면 `/api/join/<code>`가 되어
+    // 랜딩(404)도 AASA의 paths(`/join/*`)도 못 맞춘다. 요청 호스트에서 그대로 만든다.
+    const inviteUrl = `https://${req.get('host')}/join/${journey.inviteCode}`;
 
     return sendSuccess(res, 200, '초대 링크가 생성되었습니다', {
       inviteCode: journey.inviteCode,

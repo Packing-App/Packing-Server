@@ -68,14 +68,20 @@ const journeySchema = new mongoose.Schema(
     }],
     inviteCode: {   // 딥링크 초대 코드 (링크로 참여). 발급 전엔 null
       type: String,
-      unique: true,
-      sparse: true,   // null 다수 허용하면서 값이 있으면 유니크
       default: null
     }
   },
   {
     timestamps: true    // createdAt, updatedAt 필드 추가
   }
+);
+
+// 초대 코드 유니크 인덱스.
+// sparse는 필드 누락만 건너뛰고 null은 색인하므로, default: null과 함께 쓰면
+// 코드가 없는 여행 두 개째에서 중복키가 난다. 부분 인덱스로 문자열만 색인한다.
+journeySchema.index(
+  { inviteCode: 1 },
+  { unique: true, partialFilterExpression: { inviteCode: { $type: 'string' } } }
 );
 
 // 생성자를 자동으로 참가자에 추가하는 미들웨어

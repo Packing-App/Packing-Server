@@ -11,9 +11,7 @@ const initAPNProvider = () => {
   try {
     // 문자열 내의 \n을 실제 줄바꿈으로 변환
     const privateKey = process.env.APPLE_PRIVATE_KEY_STRING.replace(/\\n/g, '\n');
-    
-    console.log("변환된 개인 키 형식 확인:", privateKey.slice(0, 50) + "...");
-    
+
     const options = {
       token: {
         key: privateKey, // 변환된 키 사용

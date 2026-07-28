@@ -8,7 +8,7 @@ const logger = require('../config/logger');
 const { getDestinationImage } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
 const { isParticipant, isCreator } = require('../middlewares/journeyAccess');
-const { generateInviteCode } = require('../utils/inviteCode');
+const { generateInviteCode, normalizeCode, isValidCode } = require('../utils/inviteCode');
 const { PUBLIC_ORIGIN } = require('../config/appLinks');
 
 /**
@@ -497,10 +497,16 @@ const getInviteLink = async (req, res) => {
  */
 const joinByInviteCode = async (req, res) => {
   try {
-    const { code } = req.body;
+    // 사용자 입력이므로 DB 조회 전에 정규화·형식 검증을 거친다. 객체를 그대로 넘기면
+    // `{"code":{"$gt":""}}`가 코드 발급된 임의의 여행에 매칭되고, `$regex`로 코드를 열거할 수 있다.
+    const code = normalizeCode(req.body.code);
 
     if (!code) {
       return sendError(res, 400, '초대 코드를 입력해주세요');
+    }
+
+    if (!isValidCode(code)) {
+      return sendError(res, 400, '올바른 초대 코드 형식이 아닙니다');
     }
 
     const journey = await Journey.findOne({ inviteCode: code });

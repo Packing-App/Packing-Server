@@ -10,6 +10,7 @@ const multer = require('multer');
 const multerS3 = require('multer-s3');
 const path = require('path');
 const logger = require('../config/logger');
+const { sendError } = require('../utils/responseHelper');
 
 // AWS 설정
 AWS.config.update({
@@ -22,12 +23,12 @@ const s3 = new AWS.S3();
 
 // S3 연결 테스트 (라우터 파일 내에 추가)
 s3.listBuckets((err, data) => {
-    if (err) {
-      console.error('S3 연결 테스트 오류:', err);
-    } else {
-      console.log('S3 연결 성공, 사용 가능한 버킷:', data.Buckets.map(b => b.Name));
-    }
-  });
+  if (err) {
+    logger.error(`S3 연결 테스트 오류: ${err.message}`);
+  } else {
+    logger.info(`S3 연결 성공, 버킷 ${data.Buckets.length}개`);
+  }
+});
 
 // 파일 업로드 미들웨어 설정
 const upload = multer({
@@ -62,22 +63,13 @@ const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     // Multer 오류 처리
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        message: '파일 크기는 5MB를 초과할 수 없습니다.'
-      });
+      return sendError(res, 400, '파일 크기는 5MB를 초과할 수 없습니다.');
     }
-    return res.status(400).json({
-      success: false,
-      message: `파일 업로드 오류: ${err.message}`
-    });
+    return sendError(res, 400, `파일 업로드 오류: ${err.message}`);
   } else if (err) {
     // 기타 오류
     logger.error(`File upload error: ${err.message}`);
-    return res.status(400).json({
-      success: false,
-      message: err.message || '파일 업로드 중 오류가 발생했습니다.'
-    });
+    return sendError(res, 400, err.message || '파일 업로드 중 오류가 발생했습니다.');
   }
   next();
 };

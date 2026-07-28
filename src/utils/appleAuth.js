@@ -1,5 +1,6 @@
 // src/utils/appleAuth.js
 const jwt = require('jsonwebtoken');
+const logger = require('../config/logger');
 
 /**
  * Apple Client Secret 생성
@@ -46,8 +47,7 @@ const createAppleClientSecret = () => {
     
     return clientSecret;
   } catch (error) {
-    console.error('Error creating Apple client secret:', error.message);
-    console.error(error.stack);
+    logger.error(`Apple client secret 생성 오류: ${error.message}`);
     throw new Error('Failed to create Apple client secret');
   }
 };

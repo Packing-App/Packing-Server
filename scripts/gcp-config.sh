@@ -3,7 +3,7 @@
 # 프로젝트나 리전을 바꾸려면 이 파일만 수정하면 된다.
 
 # ⚠️ Packing 전용 새 GCP 프로젝트 ID를 여기 채운다.
-#    (HANDOFF-MANUAL-PROMPTS.md의 "1. GCP 프로젝트 생성" 프롬프트로 만든 뒤 값 복사)
+#    (DEPLOYMENT.md의 "1. GCP — 프로젝트 생성 + 결제 연결" 절차대로 만든 뒤 값 복사)
 #    예: packing-470000  ← gcloud가 생성 시 부여한 실제 ID
 PROJECT_ID="packing-503507"
 

@@ -3,19 +3,17 @@ const { verifyToken } = require('../utils/jwt');
 const User = require('../models/User');
 const logger = require('../config/logger');
 
-const protect = async (req, res, next) => {
-  let token;
-
-  // 헤더에서 토큰 확인
-  // Authorization
-  if (
-    // Bearer token
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    // 토큰 추출
-    token = req.headers.authorization.split(' ')[1];
+// Authorization: Bearer <token> 에서 토큰만 뽑는다. 없으면 undefined.
+const extractToken = (req) => {
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer')) {
+    return header.split(' ')[1];
   }
+  return undefined;
+};
+
+const protect = async (req, res, next) => {
+  const token = extractToken(req);
 
   // 토큰이 없는 경우
   if (!token) {
@@ -60,4 +58,29 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// 토큰이 있으면 해석해 req.user를 채우고, 없거나 유효하지 않아도 그냥 통과시킨다.
+// 비인증으로도 열려야 하지만 로그인 상태라면 응답을 더 채울 수 있는 경로에 쓴다
+// (초대 링크 미리보기 — 로그인했으면 "이미 참가 중"인지 알려준다).
+const optionalAuth = async (req, res, next) => {
+  const token = extractToken(req);
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = verifyToken(token, process.env.JWT_SECRET);
+    if (decoded) {
+      const user = await User.findById(decoded.id);
+      if (user) {
+        req.user = user;
+      }
+    }
+  } catch (error) {
+    // 인증 실패는 이 경로에서 오류가 아니다. 익명 요청으로 이어간다.
+    logger.warn(`optionalAuth: 토큰 해석 실패 (${error.message})`);
+  }
+
+  next();
+};
+
+module.exports = { protect, optionalAuth };

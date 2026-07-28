@@ -9,6 +9,8 @@ const { getDestinationImage } = require('../utils/externalApiUtils');
 const { notifyUser } = require('../services/notificationService');
 const { isParticipant, isCreator } = require('../middlewares/journeyAccess');
 const { generateInviteCode, normalizeCode, isValidCode } = require('../utils/inviteCode');
+const { isInviteExpired } = require('../utils/inviteExpiry');
+const { getInvitePreview, toPreviewPayload } = require('../services/invitePreviewService');
 const { PUBLIC_ORIGIN } = require('../config/appLinks');
 
 /**
@@ -465,6 +467,13 @@ const getInviteLink = async (req, res) => {
 
     // 코드가 없으면 생성 (충돌 시 최대 5회 재시도)
     if (!journey.inviteCode) {
+      // 발급은 방장만. 조회·공유는 참가자 전원이 해도 되지만(성장에 유리),
+      // 방장이 폐기한 링크를 다른 참가자가 되살릴 수 있으면 폐기가 무력해진다.
+      // 미들웨어로는 못 나눈다 — "코드가 없을 때만"이라는 상태 의존 분기라서.
+      if (!isCreator(journey, req.user._id)) {
+        return sendError(res, 403, '초대 링크는 여행을 만든 사람만 만들 수 있습니다');
+      }
+
       let code;
       for (let i = 0; i < 5; i++) {
         code = generateInviteCode();
@@ -485,6 +494,55 @@ const getInviteLink = async (req, res) => {
     });
   } catch (error) {
     logger.error(`초대 링크 생성 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
+/**
+ * 초대 링크 폐기 (방장만)
+ * @route DELETE /api/journeys/:id/invite-link
+ * @access Private
+ * 유출 대응 수단. 코드를 null로 되돌리면 기존 링크는 전부 죽는다.
+ * 재발급은 별도 API 없이 POST /invite-link를 다시 부르면 된다(없으면 생성하므로).
+ */
+const revokeInviteLink = async (req, res) => {
+  try {
+    const journey = req.journey;
+
+    journey.inviteCode = null;
+    await journey.save();
+
+    return sendSuccess(res, 200, '초대 링크를 폐기했습니다');
+  } catch (error) {
+    logger.error(`초대 링크 폐기 오류: ${error.message}`);
+    return sendError(res, 500, '서버 오류가 발생했습니다');
+  }
+};
+
+/**
+ * 초대 코드 미리보기 (참여 전에 무슨 여행인지 확인)
+ * @route GET /api/journeys/preview/:code
+ * @access Public — 토큰이 있으면 optionalAuth가 req.user를 채워 isParticipant를 덧붙인다.
+ */
+const previewInviteCode = async (req, res) => {
+  try {
+    const preview = await getInvitePreview(req.params.code);
+
+    // notfound / private / expired를 한 메시지로 합친다. 구분해주면 코드 존재 여부가 샌다.
+    if (!preview.ok) {
+      return sendError(res, 404, '유효하지 않거나 만료된 초대 링크입니다');
+    }
+
+    const data = toPreviewPayload(preview.journey);
+
+    // 이미 참가자면 클라이언트가 시트를 건너뛰고 바로 여행으로 들어간다.
+    if (req.user) {
+      data.isParticipant = isParticipant(preview.journey, req.user._id);
+    }
+
+    return sendSuccess(res, 200, '초대 정보를 조회했습니다', data);
+  } catch (error) {
+    logger.error(`초대 미리보기 오류: ${error.message}`);
     return sendError(res, 500, '서버 오류가 발생했습니다');
   }
 };
@@ -516,6 +574,12 @@ const joinByInviteCode = async (req, res) => {
 
     if (journey.isPrivate) {
       return sendError(res, 400, '혼자 여행에는 참여할 수 없습니다');
+    }
+
+    // 종료일이 지난 여행의 링크는 받지 않는다. 새 필드 없이 endDate + 1일로 판정한다
+    // (자세한 근거는 utils/inviteExpiry.js).
+    if (isInviteExpired(journey)) {
+      return sendError(res, 410, '만료된 초대 링크입니다');
     }
 
     const populate = (id) =>
@@ -562,5 +626,7 @@ module.exports = {
   respondToInvitation,
   getRecommendations,
   getInviteLink,
+  revokeInviteLink,
+  previewInviteCode,
   joinByInviteCode
 };

@@ -22,9 +22,11 @@ Node 버전: `>=18 <23` (package.json engines).
 디렉터리 구조(`routes/` → `controllers/` → `services/` → `models/`)는 Express 관례 그대로다.
 관례로 짐작할 수 없는 건 이 둘뿐이다.
 
-- **`app.js`가 모든 라우터를 `/api/*`와 `/*`(접두사 없음) 양쪽에 마운트한다**(`src/app.js:140-157`).
+- **`app.js`가 모든 라우터를 `/api/*`와 `/*`(접두사 없음) 양쪽에 마운트한다**(`src/app.js`).
   iOS 클라이언트 호환 때문이다. **라우터를 추가하면 두 블록 다 등록해야 한다.**
 - 인증이 필요한 라우트에는 `src/middlewares/auth.js`의 `protect`를 건다.
+  비인증으로도 열리되 로그인 상태면 응답을 더 채우는 라우트에는 같은 파일의 `optionalAuth`를 쓴다
+  (토큰이 없거나 깨져도 통과시키고 `req.user`만 비운다). 현재 사용처는 초대 미리보기 하나다.
 
 ## 재사용 자산 — 새로 짜기 전에 여기부터
 
@@ -63,6 +65,25 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
 ⚠️ iOS 앱은 현재 소켓에 접속하지 않는다(순수 REST). 소켓이 실제로 쓰일 때의 인프라 제약은
 [DEPLOYMENT.md](DEPLOYMENT.md)의 "인프라 제약" 참조.
 
+### 초대 링크 — `src/services/invitePreviewService.js`
+
+초대 코드로 "무슨 여행인지"를 조회하는 **단일 진입점**. 웹 랜딩(`src/views/joinLanding.js`)과
+미리보기 API(`GET /journeys/preview/:code`)가 같은 판정·같은 노출 범위를 쓰도록 여기 모았다.
+
+- `getInvitePreview(code)` — 형식 검증 → 조회 → `isPrivate` → 만료 순으로 거른다.
+  **`isPrivate`는 notfound와 똑같이 취급**한다(여행의 존재조차 알리지 않는다).
+- `toPreviewPayload(journey)` — 초대받은 사람에게 보여도 되는 필드만. **출발지(`origin`)·참가자
+  목록·여행 ID는 의도적으로 뺐다.** 여기에 필드를 더하기 전에 "링크를 주운 사람이 봐도 되나"를 먼저 본다.
+
+랜딩은 **사용자 자유 입력(제목·목적지)을 렌더**하므로 `escapeHtml`을 반드시 통과시킨다.
+스크립트는 `public/join.v<n>.js`로 외부화돼 있다 — `/static`이 7일 캐시라 **내용을 고치면 파일명 버전을 올린다**.
+
+### Rate limit — `src/middlewares/rateLimit.js`
+
+공개 경로(랜딩·미리보기·참여)에만 걸려 있다. ⚠️ **`trust proxy`를 켜지 않는다** — 켜면
+X-Forwarded-For 위조로 제한을 우회할 수 있다. 대신 Cloudflare가 넣는 `CF-Connecting-IP`를
+키로 쓴다(`resolveClientIp`). 새 공개 라우트를 열면 여기에 리미터를 추가한다.
+
 ### `src/utils/`
 
 | 파일 | 쓰임 |
@@ -73,6 +94,8 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
 | `locationUtils.js` | `processCityName` / `translateCityName` / `initCityList` / `searchCities`. `src/data/cityTranslations.js`(한↔영 도시·국가 매핑) 기반 |
 | `externalApiUtils.js` | `getWeatherData` / `analyzeWeatherCondition` / `getDestinationImage` |
 | `inviteCode.js` | `generateInviteCode` / `normalizeCode` / `isValidCode` — 혼동되는 글자(I/L/O/0/1) 제외 알파벳. 여행 초대 코드와 친구 코드가 공유한다. 테스트 있음 |
+| `inviteExpiry.js` | `isInviteExpired(journey, now)` — 초대 링크 만료(= `endDate + 1일`). 만료 전용 필드는 없다. 테스트 있음 |
+| `html.js` | `escapeHtml` — 서버 렌더 HTML에 사용자 입력을 넣을 때. 테스트 있음 |
 | `scheduler.js` | `initSchedulers` — node-cron 정기 알림(매일 09시·08시, 매주 월 10시) |
 
 특히 `scheduler.js`와 `inviteCode.js`는 모르고 다시 만들기 쉬우니 먼저 확인한다.
@@ -102,8 +125,8 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
   `sendSuccess(res, statusCode, message, data = null)` /
   `sendError(res, statusCode, message, errors = null)`를 쓴다.
   라우트 핸들러에서 `res.json`을 직접 부르지 않는다.
-  **정당한 예외는 `src/app.js`의 인프라 응답뿐** — 루트(`:58`), `/health`(`:64`),
-  `/health/ready`(`:72`), AASA(`:82`), 최종 에러 핸들러(`:163`). 이들은 API 응답 규격
+  **정당한 예외는 `src/app.js`의 인프라 응답뿐** — 루트, `/health`, `/health/ready`, AASA,
+  초대 링크 웹 랜딩(HTML), 최종 에러 핸들러. 이들은 API 응답 규격
   (`{ success, message, data }`)을 따르지 않는 게 맞다.
 - **로깅은 winston**: `require('./config/logger')`의 `logger.info/warn/error`. `console.log` 금지.
 - **에러는 던지고 중앙에서**: 최종 에러 핸들러가 `app.js`에 있다. 컨트롤러에서는 try/catch 후

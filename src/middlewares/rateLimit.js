@@ -16,23 +16,22 @@ const WINDOW_MS = 5 * 60 * 1000; // 5분
  * Cloudflare Worker → Cloud Run → express 구조라 `req.ip`는 항상 프록시 주소다.
  * 그대로 키로 쓰면 **전 세계가 한 버킷을 공유**해 정상 사용자가 먼저 막힌다.
  * 그렇다고 `trust proxy`를 켜면 X-Forwarded-For 위조로 제한을 우회할 수 있으므로 켜지 않고,
- * Cloudflare가 직접 넣어주는 `CF-Connecting-IP`를 우선으로 본다(위조해도 Cloudflare가 덮어쓴다).
+ * Cloudflare가 직접 넣어주는 `CF-Connecting-IP`를 본다.
+ *
+ * 🔴 **X-Forwarded-For는 일부러 보지 않는다.** 앱이 쓰는 주소(`packing-api.iyungui.dev`)로는
+ * 위조가 불가능하지만(클라이언트가 `CF-Connecting-IP`를 실어 보내면 Cloudflare가 403 error 1000으로
+ * 끊는다 — 2026-07-28 운영에서 확인), **Cloud Run URL(`*.run.app`)을 직접 때리면 Cloudflare가 없다.**
+ * 그때 XFF를 신뢰하면 헤더만 매번 바꿔도 새 버킷이 나와 제한이 통째로 무력해진다(실제로 재현했다).
+ * 그 경로에서는 `req.ip`(= Google LB 주소)로 떨어져 **직접 호출 전체가 한 버킷을 공유**한다.
+ * 정상 트래픽은 전부 Cloudflare를 거치므로 손해가 없고, 무차별 조회만 막힌다.
  *
  * @param {import('express').Request} req
  * @returns {string}
  */
 const resolveClientIp = (req) => {
-  const headers = req.headers || {};
-
-  const cloudflareIp = String(headers['cf-connecting-ip'] ?? '').trim();
+  const cloudflareIp = String(req.headers?.['cf-connecting-ip'] ?? '').trim();
   if (cloudflareIp) {
     return cloudflareIp;
-  }
-
-  // Cloudflare를 거치지 않는 경로(직접 Cloud Run 호출 등) 폴백. 첫 항목이 원 클라이언트다.
-  const forwarded = String(headers['x-forwarded-for'] ?? '').split(',')[0].trim();
-  if (forwarded) {
-    return forwarded;
   }
 
   return req.ip || 'unknown';

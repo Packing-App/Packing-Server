@@ -11,12 +11,12 @@ describe('resolveClientIp', () => {
     expect(resolveClientIp(req)).toBe('203.0.113.7');
   });
 
-  test('CF 헤더가 없으면 X-Forwarded-For의 첫 항목을 쓴다', () => {
+  test('X-Forwarded-For는 신뢰하지 않는다 (위조로 버킷을 갈아탈 수 있다)', () => {
     const req = reqWith({ 'x-forwarded-for': '198.51.100.1, 10.0.0.1' }, '10.0.0.9');
-    expect(resolveClientIp(req)).toBe('198.51.100.1');
+    expect(resolveClientIp(req)).toBe('10.0.0.9');
   });
 
-  test('둘 다 없으면 req.ip로 떨어진다', () => {
+  test('CF 헤더가 없으면 req.ip로 떨어진다', () => {
     expect(resolveClientIp(reqWith({}, '10.0.0.9'))).toBe('10.0.0.9');
   });
 
@@ -25,8 +25,8 @@ describe('resolveClientIp', () => {
     expect(resolveClientIp({})).toBe('unknown');
   });
 
-  test('빈 문자열 헤더는 없는 것으로 본다', () => {
-    const req = reqWith({ 'cf-connecting-ip': '  ', 'x-forwarded-for': '' }, '10.0.0.9');
+  test('빈 문자열 CF 헤더는 없는 것으로 본다', () => {
+    const req = reqWith({ 'cf-connecting-ip': '  ' }, '10.0.0.9');
     expect(resolveClientIp(req)).toBe('10.0.0.9');
   });
 });

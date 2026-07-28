@@ -80,9 +80,15 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
 
 ### Rate limit — `src/middlewares/rateLimit.js`
 
-공개 경로(랜딩·미리보기·참여)에만 걸려 있다. ⚠️ **`trust proxy`를 켜지 않는다** — 켜면
-X-Forwarded-For 위조로 제한을 우회할 수 있다. 대신 Cloudflare가 넣는 `CF-Connecting-IP`를
-키로 쓴다(`resolveClientIp`). 새 공개 라우트를 열면 여기에 리미터를 추가한다.
+공개 경로(랜딩·미리보기·참여)에만 걸려 있다. 키는 `CF-Connecting-IP`다(`resolveClientIp`).
+
+⚠️ **`trust proxy`를 켜지 않고 `X-Forwarded-For`도 보지 않는다.** 둘 다 위조로 제한을 우회할 수
+있어서다 — 앱이 쓰는 `packing-api.iyungui.dev`로는 Cloudflare가 클라이언트발 `CF-Connecting-IP`를
+403(error 1000)으로 끊어 위조가 막히지만, **Cloud Run URL(`*.run.app`)을 직접 때리면 Cloudflare가
+없다.** 거기서 XFF를 신뢰하면 헤더만 바꿔가며 무제한 조회가 된다(2026-07-28 실제로 재현).
+CF 헤더가 없는 요청은 `req.ip`로 떨어져 직접 호출끼리 한 버킷을 공유한다.
+
+새 공개 라우트를 열면 여기에 리미터를 추가한다.
 
 ### `src/utils/`
 

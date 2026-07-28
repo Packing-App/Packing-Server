@@ -2,6 +2,11 @@
 // itemKey.js는 로드 시점에 throw하지 않으므로(서버가 죽으면 안 된다) 여기서 잡는다.
 const { itemCatalog } = require('../itemCatalog');
 const { normalizeItemName } = require('../../utils/itemKey');
+const { themeTemplateData } = require('../../config/seedData');
+const {
+  getDurationBasedItems,
+  getTransportBasedItems
+} = require('../../services/itemRecommendationService');
 
 // PackingItem.js / ThemeTemplate.js의 category enum과 같은 목록
 const CATEGORIES = [
@@ -60,5 +65,28 @@ describe('itemCatalog 무결성', () => {
       .map(([name, entry]) => `${name}: ${entry.category}`);
 
     expect(invalid).toEqual([]);
+  });
+
+  // 새 준비물 이름이 추가되면 여기서 걸린다. 카탈로그에 등록하고 별칭 여부를 판단할 것.
+  // 날씨·기본 준비물 소스는 비공개 함수라 여기서 못 훑는다(테스트를 위해 export를 늘리지 않았다).
+  it('추천 소스의 모든 이름이 카탈로그에 등록돼 있다', () => {
+    const known = new Set();
+    Object.entries(itemCatalog).forEach(([canonicalName, entry]) => {
+      known.add(normalizeItemName(canonicalName));
+      (entry.aliases || []).forEach((alias) => known.add(normalizeItemName(alias)));
+    });
+
+    const names = new Set();
+    themeTemplateData.forEach((theme) => {
+      theme.items.forEach((item) => names.add(item.name));
+    });
+    // 12일로 잡아 장기 여행 전용 항목(세탁 세제·여행용 다리미)까지 포함시킨다
+    getDurationBasedItems('2026-08-01', '2026-08-12').forEach((item) => names.add(item.name));
+    ['plane', 'train', 'ship', 'bus', 'walk', 'teleport'].forEach((transport) => {
+      getTransportBasedItems(transport).forEach((item) => names.add(item.name));
+    });
+
+    const missing = [...names].filter((name) => !known.has(normalizeItemName(name)));
+    expect(missing).toEqual([]);
   });
 });

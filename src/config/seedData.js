@@ -562,4 +562,5 @@ const seedThemeTemplates = async () => {
   }
 };
 
-module.exports = { seedThemeTemplates };
+// themeTemplateData는 카탈로그 커버리지 테스트와 조합 검증에서 읽는다(시딩 동작과 무관)
+module.exports = { seedThemeTemplates, themeTemplateData };

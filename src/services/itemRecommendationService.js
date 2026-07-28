@@ -1,6 +1,7 @@
 // src/services/itemRecommendationService.js
 const ThemeTemplate = require('../models/ThemeTemplate');
 const { getWeatherData, analyzeWeatherCondition } = require('../utils/externalApiUtils');
+const { resolveItem } = require('../utils/itemKey');
 const logger = require('../config/logger');
 
 /**
@@ -31,38 +32,53 @@ const getRecommendedItems = async (journey) => {
     return uniqueItems;
   } catch (error) {
     logger.error(`준비물 추천 오류: ${error.message}`);
-    return getDefaultItems(); // 오류 발생 시 기본 준비물 반환
+    // 오류 발생 시 기본 준비물 반환. 정상 경로와 같은 규격(정본 이름·카테고리)으로 맞춘다
+    return mergeDuplicateItems(getDefaultItems());
   }
 };
 
 /**
  * 중복 아이템 병합 및 우선순위 처리
+ *
+ * 이름 문자열이 아니라 카탈로그 정본 키로 병합한다. 그래서 '래쉬가드'와 '래시가드',
+ * '물통'과 '물병'처럼 표기만 다른 항목이 하나로 합쳐진다.
+ * 병합 결과의 이름·카테고리는 카탈로그 정본으로 통일한다 — iOS가 선택 상태를 이름으로
+ * 관리하고 서버 대량 생성도 이름 완전일치로 중복을 판정하므로, 이름을 통일해야
+ * 화면과 DB에서 실제로 중복이 사라진다.
+ *
  * @param {Array} items 전체 아이템 목록
  * @returns {Array} 중복 제거된 아이템 목록
  */
 const mergeDuplicateItems = (items) => {
   const itemMap = new Map();
-  
+
   items.forEach(item => {
-    const key = item.name;
-    
-    if (itemMap.has(key)) {
-      const existingItem = itemMap.get(key);
-      // isEssential이 true인 것을 우선
-      if (item.isEssential && !existingItem.isEssential) {
-        itemMap.set(key, item);
+    const canonical = resolveItem(item.name);
+    const merged = itemMap.get(canonical.key);
+
+    if (!merged) {
+      // 소스마다 제각각인 형태(테마 소스가 .lean()으로 흘리는 _id 등)를 여기서 한 번에 정리한다
+      const fresh = {
+        name: canonical.name,
+        category: canonical.category ?? item.category, // 카탈로그 미등록이면 원본 유지
+        isEssential: Boolean(item.isEssential)
+      };
+      if (item.count) {
+        fresh.count = item.count;
       }
-      // count가 있는 경우 큰 값으로 업데이트
-      if (item.count && existingItem.count) {
-        existingItem.count = Math.max(existingItem.count, item.count);
-      } else if (item.count) {
-        existingItem.count = item.count;
-      }
-    } else {
-      itemMap.set(key, { ...item });
+      itemMap.set(canonical.key, fresh);
+      return;
+    }
+
+    // 누적본의 필드만 갱신한다. 객체를 통째로 교체하면 이미 쌓인 count가 사라진다
+    if (item.isEssential) {
+      merged.isEssential = true;
+    }
+    if (item.count) {
+      merged.count = Math.max(merged.count ?? 0, item.count);
     }
   });
-  
+
   return Array.from(itemMap.values());
 };
 

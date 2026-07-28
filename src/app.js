@@ -10,6 +10,7 @@ const logger = require('./config/logger');
 const { PUBLIC_ORIGIN, APP_SCHEME, APP_STORE_URL } = require('./config/appLinks');
 // src/app.js에 추가
 const session = require('express-session');
+const localization = require('./middlewares/localization');
 
 // 라우트 임포트 - 주석 처리 (아직 구현되지 않은 라우트)
 const authRoutes = require('./routes/auth');
@@ -33,6 +34,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 app.use(passport.initialize());
+
+// Accept-Language → req.lang (ko|en). iOS가 기기 로케일로 이 헤더를 실어 보내는데
+// 마운트가 빠져 있어 req.lang이 항상 undefined였고, packingItemController의
+// ko/en 분기가 전부 ko로 떨어졌다. 현재 req.lang 사용처는 그 컨트롤러뿐이다.
+app.use(localization);
 
 // 정적 파일. 현재는 초대 링크 공유 미리보기(og:image)용 앱 아이콘 하나뿐이다.
 // 라우트와 충돌하지 않도록 `/static` 아래에 둔다.

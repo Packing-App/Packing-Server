@@ -110,8 +110,10 @@ notifyUser(recipient, { type, content, journeyId, metadata }, pushOptions)
   `sendError` 또는 `next(err)`.
 - **언어는 기본 한국어**(응답 메시지·주석). 다만 일부 응답은 `src/localization/messages.js`(ko/en)로
   분기한다 — 현재 사용처는 `src/controllers/packingItemController.js:539,557`.
-  ⚠️ `req.lang`을 세팅하는 `src/middlewares/localization.js`는 **`app.js`에 마운트돼 있지 않아**
-  실질적으로 항상 ko로 떨어진다. 다국어를 실제로 켜려면 이 미들웨어부터 마운트해야 한다.
+  `req.lang`(ko|en)은 `src/middlewares/localization.js`가 `Accept-Language`에서 채운다.
+  `app.js`에 전역 마운트돼 있고, iOS는 기기 로케일을 이 헤더로 실어 보낸다.
+  ⚠️ **다국어 응답은 위 한 엔드포인트뿐이고 나머지 메시지는 전부 한국어 하드코딩이다.**
+  영어 기기는 지금 혼재된 응답을 받는다 — 새 메시지를 다국어로 낼지는 그때 판단한다.
 
 ## 배포
 

@@ -2,7 +2,21 @@
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Journey = require('../models/Journey');
+const { isParticipant } = require('../middlewares/journeyAccess');
+const { isValidObjectId } = require('../middlewares/validators');
 const logger = require('../config/logger');
+
+// journeyId 형식 검증 + 참가자 여부까지 확인한다.
+// join-journey와 packing-item-update가 같은 검증을 쓴다 — 후자만 빠뜨리면
+// join을 참가자로 막아도 socket.to(room)이 룸 밖에서도 발사되므로 우회로가 남는다.
+const canAccessJourneyRoom = async (journeyId, userId) => {
+  if (!isValidObjectId(journeyId)) {
+    return false;
+  }
+  const journey = await Journey.findById(journeyId);
+  return !!journey && isParticipant(journey, userId);
+};
 
 /**
  * Socket.IO 서버 설정
@@ -60,22 +74,43 @@ const setupSocketIO = (server) => {
     socket.join(`user-${userId}`);
 
     // 여행 룸 조인 이벤트
-    socket.on('join-journey', (journeyId) => {
-      socket.join(`journey-${journeyId}`);
-      logger.info(`사용자 ${userId}가 여행 룸 ${journeyId}에 참여했습니다`);
+    // ⚠️ 인증만으로는 부족하다 — 참가자 검증 없이 join을 허용하면 인증된 사용자 누구나
+    // 임의 여행 룸에 들어가 다른 참가자의 준비물 업데이트·참가자 변경 브로드캐스트를 엿볼 수 있다.
+    socket.on('join-journey', async (journeyId) => {
+      try {
+        if (!(await canAccessJourneyRoom(journeyId, userId))) {
+          logger.warn(`사용자 ${userId}가 참가자가 아닌 여행 룸 ${journeyId} 참여를 시도했습니다`);
+          return;
+        }
+        socket.join(`journey-${journeyId}`);
+        logger.info(`사용자 ${userId}가 여행 룸 ${journeyId}에 참여했습니다`);
+      } catch (error) {
+        logger.error(`여행 룸 참여 확인 오류: ${error.message}`);
+      }
     });
 
-    // 여행 룸 나가기 이벤트
+    // 여행 룸 나가기 이벤트 — 자기 소켓이 속한 룸만 벗어나므로 참가자 검증이 필요 없다.
     socket.on('leave-journey', (journeyId) => {
       socket.leave(`journey-${journeyId}`);
       logger.info(`사용자 ${userId}가 여행 룸 ${journeyId}에서 나갔습니다`);
     });
 
     // 준비물 업데이트 이벤트
-    socket.on('packing-item-update', (data) => {
-      // 같은 여행의 다른 참가자들에게 업데이트 전송
-      socket.to(`journey-${data.journeyId}`).emit('packing-item-updated', data);
-      logger.info(`준비물 업데이트: ${data.itemId}`);
+    // ⚠️ socket.to(room)은 발신자가 그 룸에 join돼 있는지 보지 않는다 — join-journey를
+    // 참가자로 제한해도, 이 핸들러가 따로 검증하지 않으면 자신이 속한 여행 A의 소켓으로
+    // 여행 B의 journeyId를 실어 보내 B 룸에 위조 이벤트를 뿌릴 수 있다.
+    socket.on('packing-item-update', async (data) => {
+      try {
+        if (!data || !(await canAccessJourneyRoom(data.journeyId, userId))) {
+          logger.warn(`사용자 ${userId}가 참가자가 아닌 여행에 업데이트 전송을 시도했습니다`);
+          return;
+        }
+        // 같은 여행의 다른 참가자들에게 업데이트 전송
+        socket.to(`journey-${data.journeyId}`).emit('packing-item-updated', data);
+        logger.info(`준비물 업데이트: ${data.itemId}`);
+      } catch (error) {
+        logger.error(`준비물 업데이트 확인 오류: ${error.message}`);
+      }
     });
 
     // 연결 해제 이벤트
@@ -130,5 +165,6 @@ module.exports = {
   setupSocketIO,
   sendNotification,
   sendParticipantUpdate,
-  sendPackingItemUpdate
+  sendPackingItemUpdate,
+  canAccessJourneyRoom
 };

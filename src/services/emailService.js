@@ -1,9 +1,13 @@
 // src/services/emailService.js
-const sgMail = require('@sendgrid/mail');
+const AWS = require('aws-sdk');
 const logger = require('../config/logger');
 
-// SendGrid API 키 설정
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// SES 클라이언트. S3와 같은 자격증명·리전을 쓴다(userController.js의 S3 생성과 같은 방식).
+const ses = new AWS.SES({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
 
 /**
  * 이메일 전송 함수
@@ -16,15 +20,20 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = async (to, subject, text, html) => {
   try {
-    const msg = {
-      to,
-      from: process.env.EMAIL_FROM, // 발신자 이메일 (SendGrid에서 인증된 주소)
-      subject,
-      text,
-      html
+    const params = {
+      Source: process.env.EMAIL_FROM, // 발신자 이메일 (SES에서 인증된 도메인의 주소)
+      Destination: { ToAddresses: [to] },
+      Message: {
+        // 한글 제목·본문이 깨지지 않으려면 Charset을 명시해야 한다 (SES 기본값은 7bit ASCII)
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: {
+          Text: { Data: text, Charset: 'UTF-8' },
+          Html: { Data: html, Charset: 'UTF-8' }
+        }
+      }
     };
 
-    await sgMail.send(msg);
+    await ses.sendEmail(params).promise();
     logger.info(`Email sent to ${to}`);
     return { success: true };
   } catch (error) {

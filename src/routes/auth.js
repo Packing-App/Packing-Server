@@ -4,6 +4,7 @@ const passport = require('passport');
 const socialAuthController = require('../controllers/socialAuthController');
 const authController = require('../controllers/authController');
 const { protect } = require('../middlewares/auth');
+const { registerLimiter, verifyCodeLimiter, resendCodeLimiter } = require('../middlewares/rateLimit');
 const logger = require('../config/logger');
 const router = express.Router();
 
@@ -18,20 +19,20 @@ const captureDeviceId = (req, res, next) => {
 };
 
 // Basic auth routes
-router.post('/register', authController.register);
+router.post('/register', registerLimiter, authController.register);
 router.post('/login', authController.login);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', protect, authController.logout);
 router.delete('/delete-account', protect, authController.deleteAccount);
 
 // 이메일 인증 관련 라우트 (인증번호 방식으로 변경)
-router.post('/verify-email', authController.verifyEmailCode);
-router.post('/resend-verification', authController.resendVerificationCode);
+router.post('/verify-email', verifyCodeLimiter, authController.verifyEmailCode);
+router.post('/resend-verification', resendCodeLimiter, authController.resendVerificationCode);
 
 // 비밀번호 관련 라우트 (인증번호 방식으로 변경)
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/verify-reset-code', authController.verifyResetCode);
-router.post('/reset-password', authController.resetPassword);
+router.post('/forgot-password', resendCodeLimiter, authController.forgotPassword);
+router.post('/verify-reset-code', verifyCodeLimiter, authController.verifyResetCode);
+router.post('/reset-password', verifyCodeLimiter, authController.resetPassword);
 router.post('/change-password', protect, authController.changePassword);
 
 // 구글 로그인

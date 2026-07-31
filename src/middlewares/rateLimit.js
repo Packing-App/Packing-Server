@@ -77,5 +77,14 @@ module.exports = {
   // GET /journeys/preview/:code — 비인증 미리보기
   previewLimiter: createLimiter({ limit: 60, handler: apiLimitHandler }),
   // POST /journeys/join — 실제 참여
-  joinLimiter: createLimiter({ limit: 20, handler: apiLimitHandler })
+  joinLimiter: createLimiter({ limit: 20, handler: apiLimitHandler }),
+  // POST /auth/register — 가입 자체가 인증 메일 발송을 트리거한다.
+  // SES는 바운스율이 계정 평판에 영향을 주므로 없는 주소로의 반복 발송을 막는다.
+  registerLimiter: createLimiter({ limit: 5, handler: apiLimitHandler }),
+  // POST /auth/verify-email, /auth/verify-reset-code, /auth/reset-password
+  // — 6자리 인증번호를 직접 대조하는 지점(브루트포스 표적)
+  verifyCodeLimiter: createLimiter({ limit: 10, handler: apiLimitHandler }),
+  // POST /auth/resend-verification, /auth/forgot-password
+  // — 실제 메일 발송을 트리거하므로 스팸/비용 관점에서 제한
+  resendCodeLimiter: createLimiter({ limit: 5, handler: apiLimitHandler })
 };

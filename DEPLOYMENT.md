@@ -290,10 +290,10 @@ ASC_KEY_PATH=./fastlane/AuthKey_XXXXXXXXXX.p8
 
 ## 남은 정리 항목
 
-- [ ] **Render 서비스 삭제** — https://dashboard.render.com 의 `packing-server`.
-      ⚠️ **새 앱 빌드가 App Store에 실제 출시되고 옛 빌드 유저 비중이 무시할 만해진 뒤에만.**
-      그 전에는 옛 빌드 유저가 아직 `onrender.com`을 본다.
-- [ ] 위 삭제 후 리포지토리에서 `render.yaml` 제거.
+- [ ] **Render 서비스 삭제** — https://dashboard.render.com 의 `packing-server`. 대시보드 작업이라
+      사람이 해야 한다. 출시 게이트는 이미 풀렸다(App Store 1.5가 2026-07-30 출시, 새 도메인 사용).
+      옛 서비스는 이미 502로 죽어 있어 롤백 가치도 없다(2026-08-02 확인).
+- [x] 리포지토리에서 `render.yaml` 제거 (2026-08-02).
 - [ ] Uptime 모니터를 `https://packing-api.iyungui.dev/health`로 재조준하고 Render URL 핑 중단.
 - [ ] `iyungui.dev` 도메인 Auto-renew ON 확인 (만료 시 전 서비스 중단).
 - [ ] `npm audit` 정리 — 특히 `multer` 1.x → 2.x는 breaking 주의. `aws-sdk` v2 → v3 검토.

@@ -125,6 +125,19 @@ CF 헤더가 없는 요청은 `req.ip`로 떨어져 직접 호출끼리 한 버�
 ⚠️ **mongoose는 이름이 같은 기존 인덱스를 고쳐주지 않는다.** 인덱스 옵션을 바꾸면 배포 전에
 운영 DB에서 기존 인덱스를 드롭해야 하고, 안 하면 `autoIndex`가 조용히 실패한다.
 
+🔴 **실제로 그 일이 났다 (2026-08-07 수정).** 위 `Journey.inviteCode` 수정(2026-07-26)은 코드만
+바뀌었고 **운영 인덱스는 `unique+sparse`인 채로 3주를 갔다.** 그동안 **초대코드가 없는 여행은
+2건째부터 생성이 500으로 죽고 있었다**(`E11000 ... inviteCode: null`). 앱의 핵심 동작이 막힌
+채였는데 아무 데도 안 보였다 — 배포 로그도 정상, 테스트도 통과였다.
+→ **인덱스 옵션을 바꾸면 운영 DB에서 실제 인덱스를 눈으로 확인**할 것:
+
+```js
+await mongoose.connection.db.collection('journeys').indexes()
+```
+
+지금 상태(수정 후): `journeys.inviteCode_1` = `unique + partialFilterExpression`,
+`users.friendCode_1` = `unique + partialFilterExpression`. 둘 다 정상.
+
 ## 규약 (반드시 따를 것)
 
 - **응답은 responseHelper로 통일**: `src/utils/responseHelper.js`의

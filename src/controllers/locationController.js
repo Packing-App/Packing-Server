@@ -1,6 +1,6 @@
 // src/controllers/locationController.js
 const { searchCities, translateCityName } = require('../utils/locationUtils');
-const { getWeatherData } = require('../utils/externalApiUtils');
+const { getWeatherData, getForecastRange } = require('../utils/externalApiUtils');
 const { sendSuccess, sendError } = require('../utils/responseHelper');
 const logger = require('../config/logger');
 
@@ -97,38 +97,20 @@ const getJourneyForecast = async (req, res) => {
       return sendError(res, 400, '시작일은 종료일보다 이전이어야 합니다');
     }
     
-    // 여행 기간 내 각 날짜의 날씨 정보 조회
-    const forecasts = [];
-    const currentDate = new Date(start);
-    
-    while (currentDate <= end) {
-      const dateString = currentDate.toISOString().split('T')[0];
-      const weatherData = await getWeatherData(city, null, new Date(currentDate));
-      
-      if (weatherData && !weatherData.error) {
-        forecasts.push({
-          date: dateString,
-          weather: weatherData
-        });
-      } else {
-        // 날씨 정보를 가져올 수 없는 경우 null 처리
-        forecasts.push({
-          date: dateString,
-          weather: null,
-          error: weatherData?.error || 'WEATHER_UNAVAILABLE',
-          message: weatherData?.message || '날씨 정보를 가져올 수 없습니다'
-        });
-      }
-      
-      // 다음 날짜로 이동
-      currentDate.setDate(currentDate.getDate() + 1);
+    // 여행 기간 전체를 한 번에 조회한다(예보 1회 + 오늘이 포함되면 현재 날씨 1회).
+    const result = await getForecastRange(city, null, start, end);
+
+    if (result.error) {
+      return sendError(res, 400, result.message || '날씨 정보를 가져오는 중 오류가 발생했습니다');
     }
-    
+
     return sendSuccess(res, 200, '여행 기간 날씨 정보 조회 성공', {
       city,
       startDate,
       endDate,
-      forecasts
+      // 예보가 실제로 덮는 마지막 날짜. 이후 날짜는 forecasts에서 weather: null로 내려간다
+      forecastAvailableUntil: result.forecastAvailableUntil,
+      forecasts: result.forecasts
     });
   } catch (error) {
     logger.error(`여행 기간 날씨 정보 조회 오류: ${error.message}`);

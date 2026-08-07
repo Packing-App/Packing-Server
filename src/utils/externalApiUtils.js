@@ -208,7 +208,7 @@ const enumerateDates = (startDate, endDate) => {
  * 예보 응답 + (있으면) 현재 날씨를 날짜별 배열로 만든다. 네트워크를 타지 않는 순수 함수.
  * 예보가 못 미치는 날짜는 값을 지어내지 않고 weather: null + 사유를 남긴다.
  */
-const buildForecastRange = ({ forecastData, currentWeather = null, dates }) => {
+const buildForecastRange = ({ forecastData, currentWeather = null, dates, originalLocation = null }) => {
   const offset = forecastData?.city?.timezone || 0;
   const byDay = groupSlotsByLocalDay(forecastData);
   const availableDays = [...byDay.keys()].sort();
@@ -222,7 +222,12 @@ const buildForecastRange = ({ forecastData, currentWeather = null, dates }) => {
     }
 
     const summary = summarizeDay(byDay.get(date), forecastData?.city || {}, offset);
-    if (summary) return { date, weather: summary };
+    if (summary) {
+      // 🔴 iOS `WeatherInfo`는 originalLocation을 **필수**로 디코딩한다. 빠뜨리면
+      // 예보 전체가 디코딩 실패로 날아간다(출시된 구버전 앱 포함). 반드시 채운다.
+      summary.originalLocation = originalLocation;
+      return { date, weather: summary };
+    }
 
     if (forecastAvailableUntil && date > forecastAvailableUntil) {
       return {
@@ -284,7 +289,8 @@ const getForecastRange = async (location, countryCode = null, startDate, endDate
     const { forecasts, forecastAvailableUntil } = buildForecastRange({
       forecastData,
       currentWeather,
-      dates
+      dates,
+      originalLocation: location
     });
 
     return { forecasts, forecastAvailableUntil };

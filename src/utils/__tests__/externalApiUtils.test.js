@@ -113,6 +113,17 @@ describe('buildForecastRange', () => {
     expect(forecasts[1].weather.tempMax).toBe(30);
   });
 
+  it('예보 항목마다 originalLocation을 채운다 — iOS가 필수로 디코딩한다', () => {
+    // 이게 빠지면 앱에서 예보 전체가 "불러올 수 없습니다"로 죽는다(출시된 구버전 포함).
+    const { forecasts } = buildForecastRange({
+      forecastData,
+      dates: ['2026-08-02', '2026-08-03'],
+      originalLocation: '오사카'
+    });
+
+    expect(forecasts.every((f) => f.weather.originalLocation === '오사카')).toBe(true);
+  });
+
   it('예보 범위를 넘는 날짜는 값을 지어내지 않는다 — 이게 이번 수정의 핵심', () => {
     const { forecasts, forecastAvailableUntil } = buildForecastRange({
       forecastData,
